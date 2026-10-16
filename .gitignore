@@ -1,0 +1,6 @@
+# Excel lock files (dibuat otomatis saat file dibuka di Excel)
+~$*.xlsx
+~$*.xls
+
+# Salinan sementara saat agregasi
+*.tmp.xlsx
