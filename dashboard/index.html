@@ -3,117 +3,68 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Sales Monitoring Dashboard</title>
+<title>Dashboard Qoala Gadget Protection</title>
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-<header class="topbar">
-  <div class="wrap topbar-in">
-    <div class="brand">
+<div class="shell">
+  <aside id="side">
+    <div class="side-brand">
       <span class="logo-badge"><img src="assets/logo.webp" alt="Logo Qoala"></span>
-      <div>
-      <div class="eyebrow">SALES MONITORING</div>
-      <h1>Dashboard Qoala Gadget Protection</h1>
-      <p class="sub" id="periodSub">Memuat data…</p>
+      <div class="side-title">Qoala Gadget<br>Protection</div>
+    </div>
+    <nav class="side-nav">
+      <a href="#/summary" data-route="summary"><span class="dot"></span>Summary</a>
+      <a href="#/spa" data-route="spa"><span class="dot"></span>SPA</a>
+      <a href="#/pa" data-route="pa"><span class="dot"></span>PA</a>
+      <a href="#/promotor" data-route="promotor"><span class="dot"></span>Promotor</a>
+    </nav>
+    <div class="side-foot" id="sideFoot"></div>
+  </aside>
+  <div class="scrim" id="scrim"></div>
+
+  <div class="main">
+    <header class="topbar">
+      <div class="wrap topbar-in">
+        <div class="brand">
+          <button id="burger" aria-label="Menu">☰</button>
+          <div>
+            <div class="eyebrow">SALES MONITORING</div>
+            <h1 id="pageTitle">Summary</h1>
+            <p class="sub" id="periodSub">Memuat data…</p>
+          </div>
+        </div>
+        <div class="top-actions">
+          <button id="btnReset" class="btn ghost">Reset filter</button>
+          <button id="btnCsv" class="btn primary">Unduh CSV bulanan</button>
+        </div>
       </div>
-    </div>
-    <div class="top-actions">
-      <button id="btnReset" class="btn ghost">Reset filter</button>
-      <button id="btnCsv" class="btn primary">Unduh CSV bulanan</button>
-    </div>
+    </header>
+
+    <main class="wrap">
+      <section class="card filters">
+        <div class="card-h">
+          <h2>Filter</h2>
+          <span class="hint" id="filterCount"></span>
+        </div>
+        <div class="grid-f">
+          <label>Tahun<select id="fYear"></select></label>
+          <label>Bulan<select id="fMonth"></select></label>
+          <label>Insurance<select id="fIns"></select></label>
+          <label>Partner<select id="fPart"></select></label>
+          <label>Produk<select id="fProd"></select></label>
+          <label>Store<select id="fStore"></select></label>
+          <label>Status polis<select id="fStatus"></select></label>
+        </div>
+      </section>
+
+      <div id="pageHead"></div>
+      <div id="pageBody"></div>
+
+      <footer class="foot"><span id="metaLine"></span></footer>
+    </main>
   </div>
-</header>
-
-<main class="wrap">
-  <section class="card filters">
-    <div class="card-h">
-      <h2>Filter</h2>
-      <span class="hint" id="filterCount"></span>
-    </div>
-    <div class="grid-f">
-      <label>Tahun<select id="fYear"></select></label>
-      <label>Bulan<select id="fMonth"></select></label>
-      <label>Insurance<select id="fIns"></select></label>
-      <label>Partner<select id="fPart"></select></label>
-      <label>Produk<select id="fProd"></select></label>
-      <label>Store<select id="fStore"></select></label>
-      <label>Status polis<select id="fStatus"></select></label>
-      <label>PA<select id="fPa"></select></label>
-    </div>
-  </section>
-
-  <section class="kpis" id="kpis"></section>
-
-  <section class="card">
-    <div class="card-h row">
-      <div><h2>Tren bulanan — NoP &amp; GWP</h2><p class="muted">NoP (batang) vs GWP (garis). Arahkan kursor untuk detail.</p></div>
-      <div class="tabs" id="monthTabs">
-        <button data-m="both" class="on">Keduanya</button>
-        <button data-m="nop">NoP</button>
-        <button data-m="gwp">GWP</button>
-      </div>
-    </div>
-    <div id="monthlyChart" class="chart"></div>
-    <div class="legend"><span><i class="sw bar"></i>NoP</span><span><i class="sw line"></i>GWP (Rp)</span></div>
-  </section>
-
-  <div class="cols2">
-    <section class="card">
-      <h2>Perbandingan tahunan</h2>
-      <p class="muted">Total NoP &amp; GWP per tahun (mengikuti filter).</p>
-      <div id="yearChart" class="chart"></div>
-      <div id="yearTable"></div>
-    </section>
-    <section class="card trend">
-      <h2>Ringkasan tren</h2>
-      <p class="muted">Dihitung otomatis dari data terfilter.</p>
-      <div id="trendCards" class="trend-cards"></div>
-      <ul id="trendList" class="trend-list"></ul>
-    </section>
-  </div>
-
-  <section class="card" id="tgtSec">
-    <div class="card-h row">
-      <div><h2>Target vs Achievement — Okt 2026 <span class="muted-sm">data per 15 Okt</span></h2>
-      <p class="muted" id="tgtNote">Periode dikunci Okt-2026 · estimasi linear ×31/15 · mengikuti filter Store/Partner/PA.</p></div>
-      <div class="tabs" id="tgtTabs">
-        <button data-t="all" class="on">Semua</button>
-        <button data-t="behind">Belum 100%</button>
-        <button data-t="done">Tercapai</button>
-      </div>
-    </div>
-    <div class="kpis" id="tgtKpis" style="margin-top:12px"></div>
-    <div class="tgt-controls">
-      <input id="tgtSearch" type="search" placeholder="Cari store / PA…">
-      <select id="tgtSort">
-        <option value="tg">Urut: Target GWP terbesar</option>
-        <option value="achLo">Urut: Achievement GWP terendah</option>
-        <option value="achHi">Urut: Achievement GWP tertinggi</option>
-        <option value="gap">Urut: Selisih GWP terbesar</option>
-      </select>
-    </div>
-    <div class="tbl-wrap tgt-wrap"><table id="tgtTable" class="tgt">
-      <thead><tr><th class="sticky">Store</th><th>PA</th><th>Tgt NoP</th><th>Akt NoP</th><th>Ach NoP</th><th>Tgt GWP</th><th>Akt GWP</th><th>Ach GWP</th><th>Est NoP</th><th>Est GWP</th><th>Est Ach</th><th>Status</th></tr></thead>
-      <tbody></tbody>
-    </table></div>
-  </section>
-
-  <div class="cols2">
-    <section class="card"><h2>Top produk <span class="muted-sm">berdasar GWP</span></h2><div id="topProd"></div></section>
-    <section class="card"><h2>Top store <span class="muted-sm">berdasar GWP</span></h2><div id="topStore"></div></section>
-  </div>
-  <div class="cols2">
-    <section class="card"><h2>Top PA <span class="muted-sm">berdasar GWP</span></h2><div id="topPa"></div></section>
-    <section class="card"><h2>Komposisi <span class="muted-sm">partner · status · insurance</span></h2><div id="mixBox"></div></section>
-  </div>
-
-  <section class="card">
-    <div class="card-h row"><div><h2>Detail bulanan</h2><p class="muted">NoP, GWP, dan rata-rata GWP/polis per bulan.</p></div></div>
-    <div class="tbl-wrap"><table id="monthTable"><thead><tr><th>Bulan</th><th>NoP</th><th>GWP</th><th>Rata-rata/polis</th><th>Share NoP</th><th>Share GWP</th></tr></thead><tbody></tbody></table></div>
-  </section>
-
-  <footer class="foot"><span id="metaLine"></span></footer>
-</main>
+</div>
 
 <script src="data/summary.js"></script>
 <script src="app.js"></script>

@@ -82,7 +82,10 @@ public static class TargetExport
                 first=false; n++;
                 w.Write("{\"s\":\""+Esc(store)+"\"");
                 w.Write(",\"p\":\""+Esc(partner)+"\"");
+                w.Write(",\"am\":\""+Esc(am)+"\"");
+                w.Write(",\"spa\":\""+Esc(spa)+"\"");
                 w.Write(",\"pa\":\""+Esc(pa)+"\"");
+                w.Write(",\"pr\":\""+Esc(prom)+"\"");
                 w.Write(",\"tn\":"+tn.ToString(System.Globalization.CultureInfo.InvariantCulture));
                 w.Write(",\"tg\":"+tg.ToString(System.Globalization.CultureInfo.InvariantCulture));
                 w.Write("}");
