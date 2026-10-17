@@ -78,10 +78,9 @@ table.tgt thead th.sticky{z-index:3}
 /* sidebar layout */
 .shell{display:flex;min-height:100vh}
 #side{width:250px;flex:none;background:linear-gradient(180deg,#0c2340 0%,#16406f 100%);color:#dbe7f5;display:flex;flex-direction:column;position:sticky;top:0;height:100vh;z-index:40}
-.side-brand{display:flex;align-items:center;gap:10px;padding:18px 14px 12px}
-.side-brand .logo-badge{padding:4px 10px;border-radius:10px}
-.side-brand .logo-badge img{height:34px;max-width:120px}
-.side-title{font-weight:800;font-size:13.5px;line-height:1.35}
+.side-brand{display:block;padding:16px 14px 10px}
+.side-brand .logo-badge{display:block;width:100%;padding:10px 12px;border-radius:12px;box-shadow:0 4px 14px rgba(0,0,0,.18)}
+.side-brand .logo-badge img{width:100%;height:auto;max-width:none;max-height:none}
 .side-nav{display:flex;flex-direction:column;gap:4px;padding:6px 12px}
 .side-nav a{color:#c9d8ec;text-decoration:none;font-weight:700;font-size:14px;padding:10px 12px;border-radius:10px;display:flex;align-items:center;gap:10px}
 .side-nav a:hover{background:rgba(255,255,255,.08);color:#fff}
