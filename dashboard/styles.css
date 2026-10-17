@@ -56,6 +56,12 @@ select{background:#f8fafc;border:1px solid var(--line);border-radius:10px;paddin
 .bar-fill{height:100%;background:linear-gradient(90deg,var(--blue),var(--teal));border-radius:999px}
 .bar-row .n{font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .bar-row .v{color:var(--muted);font-variant-numeric:tabular-nums}
+.bar-row .v2{grid-column:1/-1;color:var(--muted);font-size:12px;font-variant-numeric:tabular-nums}
+.bar-track{position:relative}
+.bar-mark{position:absolute;top:-3px;bottom:-3px;width:2px;background:#0f2a44;opacity:.5;border-radius:2px}
+.achv{font-weight:800;font-variant-numeric:tabular-nums;text-align:right}
+.t-green{color:#15803d}.t-amber{color:#a16207}.t-orange{color:#c2410c}.t-red{color:#be123c}.t-gray{color:#64748b}
+.ach-note{margin:0 0 10px !important}
 .tbl-wrap{overflow-x:auto}
 table{width:100%;border-collapse:collapse;font-size:13px}
 th,td{text-align:right;padding:9px 10px;border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums}
