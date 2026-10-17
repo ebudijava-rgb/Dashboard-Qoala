@@ -312,18 +312,22 @@ function renderAchBreak(b){
   });
   var pace=rd.elapsed/rd.dim;
   var h='<p class="muted ach-note">Bulan berjalan <b>'+ymLabel(DATA.targetMeta.month)+'</b> · aktual s/d tgl '+rd.elapsed+
-        ' · urut % achievement · batang gelap = pace target '+(pace*100).toLocaleString("id-ID",{maximumFractionDigits:1})+'%'+
+        ' · urut % achievement · <b>est</b> = proyeksi akhir bulan (aktual ×'+rd.fac.toLocaleString("id-ID",{maximumFractionDigits:2})+
+        ') · batang gelap = pace target '+(pace*100).toLocaleString("id-ID",{maximumFractionDigits:1})+'%'+
         (skipN?(' · '+skipN+' store tanpa '+lbl+' ('+fmtInt(skipNop)+' polis) tidak dihitung'):'')+'</p>';
   if(!list.length){ el.innerHTML=h+'<p class="muted">Semua store pada filter ini belum punya '+lbl+'.</p>'; return; }
   h+=list.slice(0,10).map(function(o){
     var p=isFinite(o.ach)?Math.max(0,Math.min(1,o.ach))*100:0;
     var pc=isFinite(o.ach)?(o.ach*100).toLocaleString("id-ID",{maximumFractionDigits:1})+"%":"—";
-    var tip=o.st.t+" · estimasi EOM "+(isFinite(o.est)?(o.est*100).toLocaleString("id-ID",{maximumFractionDigits:1})+"%":"—")+
-            " · "+o.nst+" store";
+    var sc="t-"+o.st.c.replace("p-","");
+    var estPc=isFinite(o.est)?(o.est*100).toLocaleString("id-ID",{maximumFractionDigits:1})+"%":"—";
+    var tip=o.st.t+" · "+o.nst+" store";
     return '<div class="bar-row">'+
       '<span class="n" title="'+esc(o.k)+'">'+esc(o.k)+'</span>'+
-      '<span class="achv t-'+o.st.c.replace("p-","")+'" title="'+esc(tip)+'">'+pc+'</span>'+
-      '<span class="v2">NoP '+fmtInt(o.an)+' / '+fmtInt(o.tn)+' · GWP '+fmtIDR(o.ag)+' / '+fmtIDR(o.tg)+'</span>'+
+      '<span class="achvw" title="'+esc(tip)+'"><span class="achv '+sc+'">'+pc+'</span>'+
+        '<span class="achvest '+sc+'">est '+estPc+'</span></span>'+
+      '<span class="v2">NoP '+fmtInt(o.an)+' / '+fmtInt(o.tn)+' · GWP '+fmtIDR(o.ag)+' / '+fmtIDR(o.tg)+
+        ' · est '+fmtInt(o.an*rd.fac)+' polis / '+fmtIDR(o.ag*rd.fac)+'</span>'+
       '<div class="bar-track"><div class="bar-fill" style="width:'+p.toFixed(1)+'%"></div>'+
       '<div class="bar-mark" style="left:'+(pace*100).toFixed(2)+'%" title="pace"></div></div>'+
     '</div>';
