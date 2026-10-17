@@ -389,7 +389,7 @@ function render(agg){
       mh+='<h3 style="font-size:13px;margin:12px 0 4px">'+pair[0]+'</h3>';
       topEntries(pair[1],6).forEach(function(e){
         var tot=agg.totG||1, top0=topEntries(pair[1],6)[0];
-        mh+='<div class="bar-row"><span class="n">'+esc(e.k)+'</span><span class="v">'+(e.g/tot*100).toLocaleString("id-ID",{maximumFractionDigits:1})+'%</span><div class="bar-track"><div class="bar-fill" style="width:'+Math.max(2,e.g/((top0&&top0.g)||1)*100).toFixed(1)+'%"></div></div>';
+        mh+='<div class="bar-row"><span class="n">'+esc(e.k)+'</span><span class="v">'+(e.g/tot*100).toLocaleString("id-ID",{maximumFractionDigits:1})+'%</span><div class="bar-track"><div class="bar-fill" style="width:'+Math.max(2,e.g/((top0&&top0.g)||1)*100).toFixed(1)+'%"></div></div></div>';
       });
     });
     $("mixBox").innerHTML=mh;
@@ -406,7 +406,7 @@ function render(agg){
   if(scopeVal()!=="ALL") actF++;
   $("filterCount").textContent=actF?actF+" filter aktif · "+fmtInt(agg.totN)+" polis":"Tanpa filter · "+fmtInt(agg.totN)+" polis";
   var sc=scopeLabel();
-  $("periodSub").textContent=(labels.length?("Periode tampil: "+labels[0]+" → "+labels[labels.length-1]):"Periode kosong")+(sc?" · "+sc:"")+" · Sumber: Data-raw.xlsx ("+fmtInt(DATA.facts.length)+" baris)";
+  $("periodSub").innerHTML=esc((labels.length?("Periode tampil: "+labels[0]+" → "+labels[labels.length-1]):"Periode kosong")+(sc?" · "+sc:""))+'<span class="hide-sm">'+esc(" · Sumber: Data-raw.xlsx ("+fmtInt(DATA.facts.length)+" baris)")+'</span>';
   $("metaLine").textContent="Dibuat "+(DATA.meta&&DATA.meta.generated?DATA.meta.generated:"")+" · NoP=SUM(NoP) · GWP=SUM(gwp) · Target: "+((DATA.targetMeta&&DATA.targetMeta.source)||"Target.xlsx")+" ("+((DATA.target&&DATA.target.length)||0)+" store, bulan "+((DATA.targetMeta&&DATA.targetMeta.month)||"—")+" s/d tgl "+elapsedOf()+")";
 }
 function scopeLabel(){
