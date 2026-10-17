@@ -611,7 +611,7 @@ function renderRoute(){
   document.querySelectorAll(".side-nav a").forEach(function(a){
     a.classList.toggle("on", a.dataset.route===ROUTE);
   });
-  var titles={summary:"Summary",spa:"Halaman SPA",pa:"Halaman PA",promotor:"Halaman Promotor"};
+  var titles={summary:"Qoala Gadget Protection x MAP Tech",spa:"Halaman SPA",pa:"Halaman PA",promotor:"Halaman Promotor"};
   $("pageTitle").textContent=titles[ROUTE]||"Summary";
   var spaRoute=(ROUTE==="spa"), paRoute=(ROUTE==="pa"), promRoute=(ROUTE==="promotor");
   var lblSpa=$("lblSpa"); if(lblSpa) lblSpa.style.display=spaRoute?"none":"";
