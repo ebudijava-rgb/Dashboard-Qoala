@@ -1,6 +1,8 @@
-# Excel lock files (dibuat otomatis saat file dibuka di Excel)
-~$*.xlsx
-~$*.xls
+# File data mentah besar - tidak di-commit (tetap ada di komputer)
+Data-raw.xlsx
 
-# Salinan sementara saat agregasi
-*.tmp.xlsx
+# Lock file sementara Excel
+~$*
+
+# Hasil ekspor sementara
+dashboard/data/*.tmp
