@@ -31,7 +31,7 @@ function esc(s){ return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").rep
 function $(id){ return document.getElementById(id); }
 
 /* fakta: [mi,ins,part,prod,store,status,am,spa,pa,prom,gwp,nop] */
-var F = {year:"ALL",month:"ALL",ins:"ALL",part:"ALL",prod:"ALL",store:"ALL",status:"ALL"};
+var F = {year:"ALL",month:"ALL",ins:"ALL",part:"ALL",spa:"ALL",prod:"ALL",store:"ALL",status:"ALL"};
 var SCOPE = {spa:"ALL", pa:"ALL", prom:"ALL"};
 var ROUTE = "summary";
 var monthMode="both";
@@ -64,6 +64,7 @@ function passFact(f, ignoreYearMonth){
   }
   if(F.ins!=="ALL"&&String(f[1])!==F.ins) return false;
   if(F.part!=="ALL"&&String(f[2])!==F.part) return false;
+  if(F.spa!=="ALL"&&String(f[7])!==F.spa) return false;
   if(F.prod!=="ALL"&&String(f[3])!==F.prod) return false;
   if(F.store!=="ALL"&&String(f[4])!==F.store) return false;
   if(F.status!=="ALL"&&String(f[5])!==F.status) return false;
@@ -342,7 +343,7 @@ function render(agg){
   renderTable(agg,vis);
   renderDaily();
   renderTarget();
-  var actF=[F.year,F.month,F.ins,F.part,F.prod,F.store,F.status].filter(function(v){return v!=="ALL";}).length;
+  var actF=[F.year,F.month,F.ins,F.part,F.spa,F.prod,F.store,F.status].filter(function(v){return v!=="ALL";}).length;
   if(scopeVal()!=="ALL") actF++;
   $("filterCount").textContent=actF?actF+" filter aktif · "+fmtInt(agg.totN)+" polis":"Tanpa filter · "+fmtInt(agg.totN)+" polis";
   var sc=scopeLabel();
@@ -431,13 +432,14 @@ function selNorm(list, val){
 }
 function targetFilterRows(){
   if(!DATA.target) return [];
-  var selStore=selNorm(DATA.store,F.store), selPart=selNorm(DATA.partner,F.part);
+  var selStore=selNorm(DATA.store,F.store), selPart=selNorm(DATA.partner,F.part), selSpa=selNorm(DATA.spa,F.spa);
   var scSpa=ROUTE==="spa"?selNorm(DATA.spa,SCOPE.spa):null;
   var scPa=ROUTE==="pa"?selNorm(DATA.pa,SCOPE.pa):null;
   var scProm=ROUTE==="promotor"?selNorm(DATA.prom,SCOPE.prom):null;
   return DATA.target.filter(function(t){
     if(selStore!==null&&norm(t.s)!==selStore) return false;
     if(selPart!==null&&norm(t.p||"")!==selPart) return false;
+    if(selSpa!==null&&norm(t.spa||"")!==selSpa) return false;
     if(scSpa!==null&&norm(t.spa||"")!==scSpa) return false;
     if(scPa!==null&&norm(t.pa||"")!==scPa) return false;
     if(scProm!==null&&norm(t.pr||"")!==scProm) return false;
@@ -466,6 +468,7 @@ function renderTarget(){
       if(F.prod!=="ALL"&&String(f[3])!==F.prod) continue;
       if(F.ins!=="ALL"&&String(f[1])!==F.ins) continue;
       if(F.status!=="ALL"&&String(f[5])!==F.status) continue;
+      if(F.spa!=="ALL"&&String(f[7])!==F.spa) continue;
       if(selPart!==null&&norm(clean(DATA.partner[f[2]]))!==selPart) continue;
       if(selStore!==null&&norm(clean(DATA.store[f[4]]))!==selStore) continue;
       if(scSpa!==null&&norm(clean(DATA.spa[f[7]]))!==scSpa) continue;
@@ -600,6 +603,9 @@ function renderRoute(){
   });
   var titles={summary:"Summary",spa:"Halaman SPA",pa:"Halaman PA",promotor:"Halaman Promotor"};
   $("pageTitle").textContent=titles[ROUTE]||"Summary";
+  var spaRoute=(ROUTE==="spa");
+  var lblSpa=$("lblSpa"); if(lblSpa) lblSpa.style.display=spaRoute?"none":"";
+  if(spaRoute&&F.spa!=="ALL"){ F.spa="ALL"; if($("fSpa")) $("fSpa").value="ALL"; }
   $("pageHead").innerHTML=pageHeadHTML();
   $("pageBody").innerHTML=pageHTML();
   bindPage();
@@ -613,15 +619,15 @@ function init(){
   var years=[...new Set(DATA.months.map(function(m){return m.slice(0,4);}))].sort();
   var yEl=$("fYear"); yEl.innerHTML='<option value="ALL">Semua</option>'+years.map(function(y){return '<option>'+y+'</option>';}).join("");
   var mEl=$("fMonth"); mEl.innerHTML='<option value="ALL">Semua</option>'+MON.map(function(m,i){var v=String(i+1).padStart(2,"0");return '<option value="'+v+'">'+m+'</option>';}).join("");
-  fill("fIns",DATA.insurance,clean); fill("fPart",DATA.partner,clean);
+  fill("fIns",DATA.insurance,clean); fill("fPart",DATA.partner,clean); fill("fSpa",DATA.spa,clean);
   fill("fProd",DATA.product,clean); fill("fStore",DATA.store,clean);
   fill("fStatus",DATA.status,clean);
-  [["fYear","year"],["fMonth","month"],["fIns","ins"],["fPart","part"],["fProd","prod"],["fStore","store"],["fStatus","status"]].forEach(function(p){
+  [["fYear","year"],["fMonth","month"],["fIns","ins"],["fPart","part"],["fSpa","spa"],["fProd","prod"],["fStore","store"],["fStatus","status"]].forEach(function(p){
     $(p[0]).addEventListener("change",function(e){ F[p[1]]=e.target.value; render(aggregate()); });
   });
   $("btnReset").addEventListener("click",function(){
-    F={year:"ALL",month:"ALL",ins:"ALL",part:"ALL",prod:"ALL",store:"ALL",status:"ALL"};
-    ["fYear","fMonth","fIns","fPart","fProd","fStore","fStatus"].forEach(function(id){$(id).value="ALL";});
+    F={year:"ALL",month:"ALL",ins:"ALL",part:"ALL",spa:"ALL",prod:"ALL",store:"ALL",status:"ALL"};
+    ["fYear","fMonth","fIns","fPart","fSpa","fProd","fStore","fStatus"].forEach(function(id){$(id).value="ALL";});
     render(aggregate());
   });
   $("btnCsv").addEventListener("click",function(){
