@@ -623,6 +623,14 @@ function renderRoute(){
   var BRAND="Qoala Gadget Protection x MAP Tech";
   $("pageTitle").textContent=BRAND;
   $("eyebrow").textContent="SALES MONITORING · "+((PAGES[ROUTE]&&PAGES[ROUTE].title||"Summary").toUpperCase());
+  var g=$("greet");
+  if(g){
+    if(USER){
+      var hh=new Date().getHours();
+      g.textContent="Selamat "+(hh<11?"Pagi":hh<15?"Siang":hh<19?"Sore":"Malam")+", "+(USER.n||USER.u);
+      g.hidden=false;
+    } else { g.hidden=true; }
+  }
   var spaRoute=(ROUTE==="spa"), paRoute=(ROUTE==="pa"), promRoute=(ROUTE==="promotor");
   syncOrgFilters();
   if(spaRoute&&F.spa!=="ALL"){ F.spa="ALL"; if($("fSpa")) $("fSpa").value="ALL"; }
