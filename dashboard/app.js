@@ -611,8 +611,9 @@ function renderRoute(){
   document.querySelectorAll(".side-nav a").forEach(function(a){
     a.classList.toggle("on", a.dataset.route===ROUTE);
   });
-  var titles={summary:"Qoala Gadget Protection x MAP Tech",spa:"Halaman SPA",pa:"Halaman PA",promotor:"Halaman Promotor"};
-  $("pageTitle").textContent=titles[ROUTE]||"Summary";
+  var BRAND="Qoala Gadget Protection x MAP Tech";
+  $("pageTitle").textContent=BRAND;
+  $("eyebrow").textContent="SALES MONITORING · "+((PAGES[ROUTE]&&PAGES[ROUTE].title||"Summary").toUpperCase());
   var spaRoute=(ROUTE==="spa"), paRoute=(ROUTE==="pa"), promRoute=(ROUTE==="promotor");
   var lblSpa=$("lblSpa"); if(lblSpa) lblSpa.style.display=spaRoute?"none":"";
   var lblPa=$("lblPa"); if(lblPa) lblPa.style.display=paRoute?"none":"";
