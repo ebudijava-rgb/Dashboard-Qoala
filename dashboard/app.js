@@ -129,12 +129,12 @@ function dualChart(elId, labels, nop, gwp, mode){
     var yv=pt+ih*gi/4;
     var ln=document.createElementNS(ns,"line");
     ln.setAttribute("x1",pl);ln.setAttribute("x2",W-pr);ln.setAttribute("y1",yv);ln.setAttribute("y2",yv);
-    ln.setAttribute("stroke","#e6ebf2");svg.appendChild(ln);
+    ln.setAttribute("stroke","#ede7dd");svg.appendChild(ln);
     var t1=document.createElementNS(ns,"text");
-    t1.setAttribute("x",pl-8);t1.setAttribute("y",yv+4);t1.setAttribute("text-anchor","end");t1.setAttribute("font-size","11");t1.setAttribute("fill","#64748b");
+    t1.setAttribute("x",pl-8);t1.setAttribute("y",yv+4);t1.setAttribute("text-anchor","end");t1.setAttribute("font-size","11");t1.setAttribute("fill","#78716c");
     t1.textContent=fmtInt(maxN*(1-gi/4));svg.appendChild(t1);
     var t2=document.createElementNS(ns,"text");
-    t2.setAttribute("x",W-pr+8);t2.setAttribute("y",yv+4);t2.setAttribute("font-size","11");t2.setAttribute("fill","#64748b");
+    t2.setAttribute("x",W-pr+8);t2.setAttribute("y",yv+4);t2.setAttribute("font-size","11");t2.setAttribute("fill","#78716c");
     var gv=maxG*(1-gi/4);
     t2.textContent=gv>=1e9?(gv/1e9).toLocaleString("id-ID",{maximumFractionDigits:1})+"M":Math.round(gv/1e6)+"jt";
     svg.appendChild(t2);
@@ -147,18 +147,18 @@ function dualChart(elId, labels, nop, gwp, mode){
       var bh=(nop[i]/maxN)*ih;
       var r=document.createElementNS(ns,"rect");
       r.setAttribute("x",x-bw/2);r.setAttribute("y",pt+ih-bh);r.setAttribute("width",bw);r.setAttribute("height",Math.max(bh,1.5));
-      r.setAttribute("rx","6");r.setAttribute("fill","#93b4fd");r.setAttribute("stroke","#2563eb");r.setAttribute("stroke-width","1.2");
+      r.setAttribute("rx","6");r.setAttribute("fill","#fdba74");r.setAttribute("stroke","#d97706");r.setAttribute("stroke-width","1.2");
       r.dataset.tip=labels[i]+"\nNoP: "+fmtInt(nop[i])+"\nGWP: "+fmtIDR(gwp[i]);
       svg.appendChild(r);
     }
     if(mode!=="nop"){ pts.push([x,YG(gwp[i])]); var c=document.createElementNS(ns,"circle");
-      c.setAttribute("cx",x);c.setAttribute("cy",YG(gwp[i]));c.setAttribute("r","4.5");c.setAttribute("fill","#0d9488");c.setAttribute("stroke","#fff");c.setAttribute("stroke-width","2");
+      c.setAttribute("cx",x);c.setAttribute("cy",YG(gwp[i]));c.setAttribute("r","4.5");c.setAttribute("fill","#1d4ed8");c.setAttribute("stroke","#fff");c.setAttribute("stroke-width","2");
       c.dataset.tip=labels[i]+"\nNoP: "+fmtInt(nop[i])+"\nGWP: "+fmtIDR(gwp[i]);
       svg.appendChild(c); }
     if(labels.length<=21||i%2===0){
       var tx=document.createElementNS(ns,"text");
       tx.setAttribute("x",x);tx.setAttribute("y",H-12);tx.setAttribute("text-anchor",labels.length>12?"end":"middle");
-      tx.setAttribute("font-size","11");tx.setAttribute("fill","#475569");
+      tx.setAttribute("font-size","11");tx.setAttribute("fill","#57534e");
       if(labels.length>12){tx.setAttribute("transform","rotate(-32 "+x+" "+(H-12)+")");}
       tx.textContent=labels[i];svg.appendChild(tx);
     }
@@ -166,7 +166,7 @@ function dualChart(elId, labels, nop, gwp, mode){
   if(mode!=="nop"&&pts.length>1){
     var d="M"+pts.map(function(p){return p[0].toFixed(1)+" "+p[1].toFixed(1);}).join(" L");
     var pa=document.createElementNS(ns,"path");
-    pa.setAttribute("d",d);pa.setAttribute("fill","none");pa.setAttribute("stroke","#0d9488");pa.setAttribute("stroke-width","3");pa.setAttribute("stroke-linecap","round");
+    pa.setAttribute("d",d);pa.setAttribute("fill","none");pa.setAttribute("stroke","#1d4ed8");pa.setAttribute("stroke-width","3");pa.setAttribute("stroke-linecap","round");
     svg.insertBefore(pa,svg.firstChild);
   }
   el.appendChild(svg);
@@ -209,32 +209,32 @@ function cumChart(elId, labels, actual, target){
     var yv=pt+ih*gi/4;
     var ln=document.createElementNS(ns,"line");
     ln.setAttribute("x1",pl);ln.setAttribute("x2",W-pr);ln.setAttribute("y1",yv);ln.setAttribute("y2",yv);
-    ln.setAttribute("stroke","#e6ebf2"); svg.appendChild(ln);
+    ln.setAttribute("stroke","#ede7dd"); svg.appendChild(ln);
     var t=document.createElementNS(ns,"text");
-    t.setAttribute("x",pl-8);t.setAttribute("y",yv+4);t.setAttribute("text-anchor","end");t.setAttribute("font-size","11");t.setAttribute("fill","#64748b");
+    t.setAttribute("x",pl-8);t.setAttribute("y",yv+4);t.setAttribute("text-anchor","end");t.setAttribute("font-size","11");t.setAttribute("fill","#78716c");
     t.textContent=fmtInt(mx*(1-gi/4)); svg.appendChild(t);
   }
   var dt="",da="";
   for(var i=0;i<n;i++){ da+=(i?"L":"M")+X(i).toFixed(1)+" "+Y(actual[i]).toFixed(1)+" "; if(target) dt+=(i?"L":"M")+X(i).toFixed(1)+" "+Y(target[i]).toFixed(1)+" "; }
   var ar=document.createElementNS(ns,"path");
   ar.setAttribute("d",da+"L"+X(n-1).toFixed(1)+" "+(pt+ih)+" L"+X(0).toFixed(1)+" "+(pt+ih)+" Z");
-  ar.setAttribute("fill","rgba(37,99,235,.12)"); svg.appendChild(ar);
+  ar.setAttribute("fill","rgba(29,78,216,.12)"); svg.appendChild(ar);
   if(target){
     var pt2=document.createElementNS(ns,"path");
-    pt2.setAttribute("d",dt); pt2.setAttribute("fill","none"); pt2.setAttribute("stroke","#f59e0b"); pt2.setAttribute("stroke-width","2.5"); pt2.setAttribute("stroke-dasharray","7 5");
+    pt2.setAttribute("d",dt); pt2.setAttribute("fill","none"); pt2.setAttribute("stroke","#d97706"); pt2.setAttribute("stroke-width","2.5"); pt2.setAttribute("stroke-dasharray","7 5");
     svg.appendChild(pt2);
   }
   var p2=document.createElementNS(ns,"path");
-  p2.setAttribute("d",da); p2.setAttribute("fill","none"); p2.setAttribute("stroke","#2563eb"); p2.setAttribute("stroke-width","3"); p2.setAttribute("stroke-linecap","round");
+  p2.setAttribute("d",da); p2.setAttribute("fill","none"); p2.setAttribute("stroke","#1d4ed8"); p2.setAttribute("stroke-width","3"); p2.setAttribute("stroke-linecap","round");
   svg.appendChild(p2);
   for(var j=0;j<n;j++){
     var cc=document.createElementNS(ns,"circle");
     cc.setAttribute("cx",X(j)); cc.setAttribute("cy",Y(actual[j])); cc.setAttribute("r",j===n-1?5:4);
-    cc.setAttribute("fill",j===n-1?"#2563eb":"transparent"); cc.setAttribute("stroke",j===n-1?"#fff":"none"); cc.setAttribute("stroke-width","2");
+    cc.setAttribute("fill",j===n-1?"#1d4ed8":"transparent"); cc.setAttribute("stroke",j===n-1?"#fff":"none"); cc.setAttribute("stroke-width","2");
     cc.dataset.tip="Tgl "+labels[j]+"\nAktual kumulatif: "+fmtInt(actual[j])+(target?("\nPace target: "+fmtInt(target[j])+"\nSelisih: "+(actual[j]-target[j]>=0?"+":"")+fmtInt(actual[j]-target[j])):"");
     svg.appendChild(cc);
     var tx=document.createElementNS(ns,"text");
-    tx.setAttribute("x",X(j)); tx.setAttribute("y",H-12); tx.setAttribute("text-anchor","middle"); tx.setAttribute("font-size","10.5"); tx.setAttribute("fill","#475569");
+    tx.setAttribute("x",X(j)); tx.setAttribute("y",H-12); tx.setAttribute("text-anchor","middle"); tx.setAttribute("font-size","10.5"); tx.setAttribute("fill","#57534e");
     if(n<=16||j%2===0) tx.textContent=labels[j];
     svg.appendChild(tx);
   }
