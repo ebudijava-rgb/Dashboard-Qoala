@@ -45,7 +45,7 @@ var PAGES = {
 };
 var BREAKS = {
   summary:[{id:"B1",t:"Top produk",map:"byProd"},{id:"B2",t:"Top store",map:"byStore"},{id:"B3",t:"Top PA",map:"byPa"}],
-  spa:[{id:"B1",t:"Top area_manager",map:"byAm"},{id:"B2",t:"Top PA",map:"byPa"}],
+  spa:[{id:"B1",t:"Top area_manager",map:"byAm"},{id:"B2",t:"Top PA",map:"byPa"},{id:"B3",t:"Top Promotor",map:"byProm"}],
   pa:[{id:"B1",t:"Top produk",map:"byProd"},{id:"B2",t:"Top store",map:"byStore"},{id:"B3",t:"Top Promotor",map:"byProm"}],
   promotor:[{id:"B1",t:"Top produk",map:"byProd"},{id:"B2",t:"Top store",map:"byStore"}]
 };
@@ -316,7 +316,7 @@ function renderAchBreak(b){
         ') · batang gelap = pace target '+(pace*100).toLocaleString("id-ID",{maximumFractionDigits:1})+'%'+
         (skipN?(' · '+skipN+' store tanpa '+lbl+' ('+fmtInt(skipNop)+' polis) tidak dihitung'):'')+'</p>';
   if(!list.length){ el.innerHTML=h+'<p class="muted">Semua store pada filter ini belum punya '+lbl+'.</p>'; return; }
-  h+=list.slice(0,10).map(function(o){
+  h+='<div class="ach-list">'+list.map(function(o){
     var p=isFinite(o.ach)?Math.max(0,Math.min(1,o.ach))*100:0;
     var pc=isFinite(o.ach)?(o.ach*100).toLocaleString("id-ID",{maximumFractionDigits:1})+"%":"—";
     var sc="t-"+o.st.c.replace("p-","");
@@ -331,7 +331,7 @@ function renderAchBreak(b){
       '<div class="bar-track"><div class="bar-fill" style="width:'+p.toFixed(1)+'%"></div>'+
       '<div class="bar-mark" style="left:'+(pace*100).toFixed(2)+'%" title="pace"></div></div>'+
     '</div>';
-  }).join("");
+  }).join("")+'</div>';
   el.innerHTML=h;
 }
 

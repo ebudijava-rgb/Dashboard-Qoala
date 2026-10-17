@@ -64,6 +64,10 @@ select{background:#f8fafc;border:1px solid var(--line);border-radius:10px;paddin
 .achvest{font-size:11.5px;font-weight:800;font-variant-numeric:tabular-nums;text-align:right;opacity:.85}
 .t-green{color:#15803d}.t-amber{color:#a16207}.t-orange{color:#c2410c}.t-red{color:#be123c}.t-gray{color:#64748b}
 .ach-note{margin:0 0 10px !important}
+.ach-list{max-height:900px;overflow-y:auto;padding-right:4px;overscroll-behavior:contain}
+.ach-list::-webkit-scrollbar{width:8px}
+.ach-list::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:999px}
+.ach-list::-webkit-scrollbar-track{background:transparent}
 .tbl-wrap{overflow-x:auto}
 table{width:100%;border-collapse:collapse;font-size:13px}
 th,td{text-align:right;padding:9px 10px;border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums}
