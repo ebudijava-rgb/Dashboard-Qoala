@@ -7,7 +7,7 @@ using System.Xml;
 
 public static class XlsxAgg
 {
-    class Raw { public int a,c,i,j,am,ar,as_,at,au; public double gwp,nop; public int ao,ap; }
+    class Raw { public int a,c,i,j,am,ar,as_,at,au,p; public double gwp,nop; public int ao,ap; }
     // literal cache untuk kolom formula (AR/AS/AT/AU bertipe t="str" atau angka): kode negatif -(idx+2), -1 = kosong
     static int LitCode(Dictionary<string,int> lit, string v){ if(v==null) v=""; v=v.Trim(); if(v=="0") v=""; int i; if(lit.TryGetValue(v,out i)) return -(i+2); i=lit.Count; lit[v]=i; return -(i+2); }
     static string ColOf(string cellRef){ int k=0; while(k<cellRef.Length && !char.IsDigit(cellRef[k])) k++; return cellRef.Substring(0,k); }
@@ -21,10 +21,10 @@ public static class XlsxAgg
     public static string Run(string xlsxPath, string outJson)
     {
         var raws = new List<Raw>(150000);
-        var need = new HashSet<string>(new[]{"A","C","I","J","AM","AR","AS","AT","AU"});
+        var need = new HashSet<string>(new[]{"A","C","I","J","AM","AR","AS","AT","AU","P"});
         var siSets = new Dictionary<string, HashSet<int>>();
         foreach(var c in need) siSets[c]=new HashSet<int>();
-        var litAr=new Dictionary<string,int>(); var litAs=new Dictionary<string,int>(); var litAt=new Dictionary<string,int>(); var litAu=new Dictionary<string,int>();
+        var litAr=new Dictionary<string,int>(); var litAs=new Dictionary<string,int>(); var litAt=new Dictionary<string,int>(); var litAu=new Dictionary<string,int>(); var litP=new Dictionary<string,int>();
 
         using (var zip = ZipFile.OpenRead(xlsxPath))
         {
@@ -59,7 +59,7 @@ public static class XlsxAgg
                             }
                             else if(reader.NodeType==XmlNodeType.EndElement && reader.Name=="row") break;
                         }
-                        var r = new Raw(){a=-1,c=-1,i=-1,j=-1,am=-1,ar=-1,as_=-1,at=-1,au=-1,gwp=0,nop=0,ao=0,ap=0};
+                        var r = new Raw(){a=-1,c=-1,i=-1,j=-1,am=-1,ar=-1,as_=-1,at=-1,au=-1,p=-1,gwp=0,nop=0,ao=0,ap=0};
                         int tmp;
                         if(row.ContainsKey("A")&&rowT["A"]=="s"&&int.TryParse(row["A"],out tmp)){r.a=tmp; siSets["A"].Add(tmp);}
                         if(row.ContainsKey("C")&&rowT["C"]=="s"&&int.TryParse(row["C"],out tmp)){r.c=tmp; siSets["C"].Add(tmp);}
@@ -71,6 +71,8 @@ public static class XlsxAgg
                         if(row.ContainsKey("AS")){ if(rowT["AS"]=="s"&&int.TryParse(row["AS"],out tmp)){r.as_=tmp; siSets["AS"].Add(tmp);} else r.as_=LitCode(litAs,row["AS"]); }
                         if(row.ContainsKey("AT")){ if(rowT["AT"]=="s"&&int.TryParse(row["AT"],out tmp)){r.at=tmp; siSets["AT"].Add(tmp);} else r.at=LitCode(litAt,row["AT"]); }
                         if(row.ContainsKey("AU")){ if(rowT["AU"]=="s"&&int.TryParse(row["AU"],out tmp)){r.au=tmp; siSets["AU"].Add(tmp);} else r.au=LitCode(litAu,row["AU"]); }
+                        // P = policy start date (teks ISO / shared string)
+                        if(row.ContainsKey("P")){ if(rowT["P"]=="s"&&int.TryParse(row["P"],out tmp)){r.p=tmp; siSets["P"].Add(tmp);} else r.p=LitCode(litP,row["P"]); }
                         bool hasV=row.ContainsKey("V")&&row["V"]!="", hasQ=row.ContainsKey("AQ")&&row["AQ"]!="", hasM=row.ContainsKey("AO")&&row["AO"]!="";
                         if(!hasV&&!hasQ&&!hasM) continue; // lewati baris kosong berformat
                         double d;
@@ -128,7 +130,22 @@ public static class XlsxAgg
         var lstAs=new string[litAs.Count]; foreach(var kv in litAs) lstAs[kv.Value]=kv.Key;
         var lstAt=new string[litAt.Count]; foreach(var kv in litAt) lstAt[kv.Value]=kv.Key;
         var lstAu=new string[litAu.Count]; foreach(var kv in litAu) lstAu[kv.Value]=kv.Key;
+        var lstP=new string[litP.Count]; foreach(var kv in litP) lstP[kv.Value]=kv.Key;
         Func<string[],int,string> LC=(lst,code)=> code==-1? "#-1" : (code>=0? L(code) : lst[-code-2]);
+        // hari (day of month) dari policy start date, mis. "2026-10-16 12:00:00+07:00"
+        var dayCache=new Dictionary<int,int>();
+        Func<int,int> DayOf=(code)=>{
+            if(code==-1) return 0;
+            int cached; if(dayCache.TryGetValue(code,out cached)) return cached;
+            string s = code>=0? L(code) : lstP[-code-2];
+            int day=0;
+            if(!string.IsNullOrEmpty(s) && s.Length>=10 && s[4]=='-' && s[7]=='-'){
+                int dd; if(int.TryParse(s.Substring(8,2), out dd)) day=dd;
+            } else if(!string.IsNullOrEmpty(s)){
+                DateTime dt; if(DateTime.TryParse(s, out dt)) day=dt.Day;
+            }
+            dayCache[code]=day; return day;
+        };
         // build sorted dicts
         var dictIns = new SortedSet<string>(); var dictPart=new SortedSet<string>(); var dictProd=new SortedSet<string>();
         var dictStore=new SortedSet<string>(); var dictStatus=new SortedSet<string>();
@@ -155,11 +172,19 @@ public static class XlsxAgg
         var mProm=new Dictionary<string,int>(); for(int k=0;k<lProm.Count;k++)mProm[lProm[k]]=k;
         var mMonth=new Dictionary<string,int>(); for(int k=0;k<lMonth.Count;k++)mMonth[lMonth[k]]=k;
 
+        // hari (day) terakhir yang ada datanya per bulan -> dasar "tanggal berjalan"
+        var monthLastDay=new int[lMonth.Count];
+        foreach(var r in raws){
+            string ym = r.ao>0? ExcelSerialToYm(r.ao) : string.Format("{0:0000}-01", r.ap);
+            int mi=mMonth[ym]; int dy=DayOf(r.p); if(dy>monthLastDay[mi]) monthLastDay[mi]=dy;
+        }
+
         Directory.CreateDirectory(Path.GetDirectoryName(outJson));
         using(var w=new StreamWriter(outJson,false,new UTF8Encoding(false))){
             w.Write("{\"meta\":{\"rows\":"); w.Write(raws.Count);
             w.Write(",\"generated\":\""); w.Write(DateTime.Now.ToString("yyyy-MM-dd HH:mm")); w.Write("\"}");
             w.Write(",\"months\":["); for(int k=0;k<lMonth.Count;k++){if(k>0)w.Write(","); w.Write("\""); w.Write(lMonth[k]); w.Write("\"");} w.Write("]");
+            w.Write(",\"monthLastDay\":["); for(int k=0;k<monthLastDay.Length;k++){if(k>0)w.Write(","); w.Write(monthLastDay[k]);} w.Write("]");
             Action<string,List<string>> WL=(n,l)=>{ w.Write(",\""); w.Write(n); w.Write("\":["); for(int k=0;k<l.Count;k++){if(k>0)w.Write(","); w.Write("\""); w.Write(Escape(l[k])); w.Write("\"");} w.Write("]"); };
             WL("insurance",lIns); WL("partner",lPart); WL("product",lProd); WL("store",lStore); WL("status",lStatus);
             WL("am",lAm); WL("spa",lSpa); WL("pa",lPa); WL("prom",lProm);
@@ -176,7 +201,8 @@ public static class XlsxAgg
                 w.Write(","); w.Write(st); w.Write(","); w.Write(ss);
                 w.Write(","); w.Write(am); w.Write(","); w.Write(sp); w.Write(","); w.Write(pa); w.Write(","); w.Write(pm);
                 w.Write(","); w.Write(r.gwp.ToString(System.Globalization.CultureInfo.InvariantCulture));
-                w.Write(","); w.Write(r.nop.ToString(System.Globalization.CultureInfo.InvariantCulture)); w.Write("]");
+                w.Write(","); w.Write(r.nop.ToString(System.Globalization.CultureInfo.InvariantCulture));
+                w.Write(","); w.Write(DayOf(r.p)); w.Write("]");
             }
             w.Write("]}");
         }

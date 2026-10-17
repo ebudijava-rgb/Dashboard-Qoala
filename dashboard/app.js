@@ -18,6 +18,15 @@ function fmtIDR(n){
 function fmtPct(x){ if(!isFinite(x)) return "—"; var s=(x>=0?"+":"")+(x*100).toLocaleString("id-ID",{maximumFractionDigits:1}); return s+"%"; }
 var MON=["Jan","Feb","Mar","Apr","Mei","Jun","Jul","Agu","Sep","Okt","Nov","Des"];
 function ymLabel(ym){ var p=ym.split("-"); var m=+p[1]; return MON[m-1]+" "+p[0]; }
+function daysInMonthOf(ym){ return new Date(+ym.slice(0,4), +ym.slice(5,7), 0).getDate(); }
+function elapsedOf(){
+  if(!DATA.targetMeta) return 0;
+  var i=(DATA.months||[]).indexOf(DATA.targetMeta.month);
+  var v=(i>=0&&DATA.monthLastDay)?DATA.monthLastDay[i]:0;
+  if(!v) v=DATA.targetMeta.lastDay||0;
+  if(!v) v=DATA.targetMeta.daysInMonth||daysInMonthOf(DATA.targetMeta.month);
+  return v||0;
+}
 function esc(s){ return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
 function $(id){ return document.getElementById(id); }
 
@@ -26,7 +35,7 @@ var F = {year:"ALL",month:"ALL",ins:"ALL",part:"ALL",prod:"ALL",store:"ALL",stat
 var SCOPE = {spa:"ALL", pa:"ALL", prom:"ALL"};
 var ROUTE = "summary";
 var monthMode="both";
-var TGT = {summary:{q:"",sort:"tg",tab:"all"},spa:{q:"",sort:"tg",tab:"all"},pa:{q:"",sort:"tg",tab:"all"},prom:{q:"",sort:"tg",tab:"all"}};
+var TGT = {summary:{q:"",sort:"tg",tab:"all"},spa:{q:"",sort:"tg",tab:"all"},pa:{q:"",sort:"tg",tab:"all"},promotor:{q:"",sort:"tg",tab:"all"}};
 
 var PAGES = {
   summary:{title:"Summary", scope:null},
@@ -156,6 +165,9 @@ function dualChart(elId, labels, nop, gwp, mode){
     svg.insertBefore(pa,svg.firstChild);
   }
   el.appendChild(svg);
+  bindTips(svg);
+}
+function bindTips(svg){
   var tip=document.querySelector(".tip");
   if(!tip){ tip=document.createElement("div"); tip.className="tip"; document.body.appendChild(tip); }
   svg.querySelectorAll("[data-tip]").forEach(function(n){
@@ -163,6 +175,94 @@ function dualChart(elId, labels, nop, gwp, mode){
     n.addEventListener("mouseleave",function(){ tip.style.display="none"; });
   });
 }
+
+/* ---- harian ---- */
+function dailySeries(mi){
+  var ym=DATA.months[mi], dim=daysInMonthOf(ym);
+  var nop=new Array(dim+1).fill(0), gwp=new Array(dim+1).fill(0), last=0, cnt=new Array(dim+1).fill(0);
+  var facts=DATA.facts;
+  for(var k=0;k<facts.length;k++){
+    var f=facts[k];
+    if(f[0]!==mi) continue;
+    if(!passFact(f,false)) continue;
+    var d=f[12]||0; if(d<1||d>dim) continue;
+    nop[d]+=f[11]; gwp[d]+=f[10]; cnt[d]++; if(d>last) last=d;
+  }
+  return {ym:ym,dim:dim,nop:nop,gwp:gwp,cnt:cnt,last:last};
+}
+function cumChart(elId, labels, actual, target){
+  var el=$(elId); if(!el) return; el.innerHTML="";
+  var n=labels.length; if(!n) return;
+  var W=980,H=300,pl=64,pr=22,pt=16,pb=44, iw=W-pl-pr, ih=H-pt-pb;
+  var mx=Math.max.apply(null, actual.concat(target||[]).concat([1]))*1.08;
+  var ns="http://www.w3.org/2000/svg";
+  var svg=document.createElementNS(ns,"svg");
+  svg.setAttribute("viewBox","0 0 "+W+" "+H); svg.setAttribute("width","100%"); svg.style.minWidth="640px"; svg.style.height="auto";
+  function X(i){ return pl+iw*(n===1?0.5:i/(n-1)); }
+  function Y(v){ return pt+ih-(v/mx)*ih; }
+  for(var gi=0;gi<=4;gi++){
+    var yv=pt+ih*gi/4;
+    var ln=document.createElementNS(ns,"line");
+    ln.setAttribute("x1",pl);ln.setAttribute("x2",W-pr);ln.setAttribute("y1",yv);ln.setAttribute("y2",yv);
+    ln.setAttribute("stroke","#e6ebf2"); svg.appendChild(ln);
+    var t=document.createElementNS(ns,"text");
+    t.setAttribute("x",pl-8);t.setAttribute("y",yv+4);t.setAttribute("text-anchor","end");t.setAttribute("font-size","11");t.setAttribute("fill","#64748b");
+    t.textContent=fmtInt(mx*(1-gi/4)); svg.appendChild(t);
+  }
+  var dt="",da="";
+  for(var i=0;i<n;i++){ da+=(i?"L":"M")+X(i).toFixed(1)+" "+Y(actual[i]).toFixed(1)+" "; if(target) dt+=(i?"L":"M")+X(i).toFixed(1)+" "+Y(target[i]).toFixed(1)+" "; }
+  var ar=document.createElementNS(ns,"path");
+  ar.setAttribute("d",da+"L"+X(n-1).toFixed(1)+" "+(pt+ih)+" L"+X(0).toFixed(1)+" "+(pt+ih)+" Z");
+  ar.setAttribute("fill","rgba(37,99,235,.12)"); svg.appendChild(ar);
+  if(target){
+    var pt2=document.createElementNS(ns,"path");
+    pt2.setAttribute("d",dt); pt2.setAttribute("fill","none"); pt2.setAttribute("stroke","#f59e0b"); pt2.setAttribute("stroke-width","2.5"); pt2.setAttribute("stroke-dasharray","7 5");
+    svg.appendChild(pt2);
+  }
+  var p2=document.createElementNS(ns,"path");
+  p2.setAttribute("d",da); p2.setAttribute("fill","none"); p2.setAttribute("stroke","#2563eb"); p2.setAttribute("stroke-width","3"); p2.setAttribute("stroke-linecap","round");
+  svg.appendChild(p2);
+  for(var j=0;j<n;j++){
+    var cc=document.createElementNS(ns,"circle");
+    cc.setAttribute("cx",X(j)); cc.setAttribute("cy",Y(actual[j])); cc.setAttribute("r",j===n-1?5:4);
+    cc.setAttribute("fill",j===n-1?"#2563eb":"transparent"); cc.setAttribute("stroke",j===n-1?"#fff":"none"); cc.setAttribute("stroke-width","2");
+    cc.dataset.tip="Tgl "+labels[j]+"\nAktual kumulatif: "+fmtInt(actual[j])+(target?("\nPace target: "+fmtInt(target[j])+"\nSelisih: "+(actual[j]-target[j]>=0?"+":"")+fmtInt(actual[j]-target[j])):"");
+    svg.appendChild(cc);
+    var tx=document.createElementNS(ns,"text");
+    tx.setAttribute("x",X(j)); tx.setAttribute("y",H-12); tx.setAttribute("text-anchor","middle"); tx.setAttribute("font-size","10.5"); tx.setAttribute("fill","#475569");
+    if(n<=16||j%2===0) tx.textContent=labels[j];
+    svg.appendChild(tx);
+  }
+  el.appendChild(svg);
+  bindTips(svg);
+}
+function renderDaily(){
+  var el=$("dailyChart"); if(!el) return;
+  var vis=visibleMonths();
+  if(!vis.length){ el.innerHTML='<p class="muted">Tidak ada bulan pada filter ini.</p>'; if($("cumChart"))$("cumChart").innerHTML=""; if($("dailyNote"))$("dailyNote").textContent=""; if($("dailyMonth"))$("dailyMonth").textContent="—"; return; }
+  var mi=vis[vis.length-1], s=dailySeries(mi);
+  if(!s.last){ el.innerHTML='<p class="muted">Belum ada data harian pada bulan ini.</p>'; if($("cumChart"))$("cumChart").innerHTML=""; return; }
+  var labels=[], nop=[], gwp=[], cumA=[], acc=0;
+  for(var d=1;d<=s.last;d++){ labels.push(String(d)); nop.push(s.nop[d]); gwp.push(s.gwp[d]); acc+=s.nop[d]; cumA.push(acc); }
+  if($("dailyMonth")) $("dailyMonth").textContent=ymLabel(s.ym);
+  dualChart("dailyChart",labels,nop,gwp,monthMode);
+  var elapsed=s.last, dim=s.dim, isTgt=!!(DATA.targetMeta&&DATA.targetMeta.month===s.ym);
+  var totN=acc, totG=0; for(var d2=1;d2<=s.last;d2++) totG+=s.gwp[d2];
+  var rows=targetFilterRows(), tN=0, tG=0;
+  rows.forEach(function(t){ tN+=(t.tn||0); tG+=(t.tg||0); });
+  var cumT=[]; for(var i=0;i<labels.length;i++) cumT.push(tN*(i+1)/dim);
+  var cumG=[]; acc=0; for(var i2=0;i2<labels.length;i2++){ acc+=gwp[i2]; cumG.push(acc); }
+  var note="Data tgl 1–"+elapsed+" "+ymLabel(s.ym)+" · hari berjalan "+elapsed+"/"+dim+" ("+(elapsed/dim*100).toLocaleString("id-ID",{maximumFractionDigits:0})+"%) · rata-rata "+(totN/Math.max(elapsed,1)).toLocaleString("id-ID",{maximumFractionDigits:1})+" polis/hari · "+fmtIDR(totG/Math.max(elapsed,1))+"/hari";
+  if(isTgt&&tN>0) note+=" · proyeksi EOM: "+fmtInt(totN*dim/elapsed)+" polis / "+fmtIDR(totG*dim/elapsed)+" ("+((totN*dim/elapsed)/tN*100).toLocaleString("id-ID",{maximumFractionDigits:1})+"% dari target)";
+  if($("dailyNote")) $("dailyNote").textContent=note;
+  if($("cumChart")){
+    var useTgt=(isTgt&&tN>0);
+    var lg=$("cumPaceLegend"); if(lg) lg.style.display=useTgt?"":"none";
+    cumChart("cumChart",labels,cumA,useTgt?cumT:null);
+  }
+  if($("cumNote")) $("cumNote").textContent = (isTgt&&tN>0) ? ("Target "+fmtInt(tN)+" polis pada "+ymLabel(s.ym)+" · pace "+ (tN/dim).toLocaleString("id-ID",{maximumFractionDigits:1}) +" polis/hari · posisi tgl "+elapsed+": aktual "+fmtInt(totN)+" vs pace "+fmtInt(tN*elapsed/dim)+" ("+(totN/Math.max(tN*elapsed/dim,1)*100).toLocaleString("id-ID",{maximumFractionDigits:1})+"%)") : ("Kumulatif sampai tgl "+elapsed+" "+ymLabel(s.ym)+": "+fmtInt(totN)+" polis / "+fmtIDR(totG)+" · perbandingan target hanya untuk bulan "+(DATA.targetMeta?ymLabel(DATA.targetMeta.month):"—")+".");
+}
+
 
 function barList(elId, entries){
   var el=$(elId); if(!el) return; el.innerHTML="";
@@ -240,13 +340,14 @@ function render(agg){
   });
   renderTrend(agg,vis);
   renderTable(agg,vis);
+  renderDaily();
   renderTarget();
   var actF=[F.year,F.month,F.ins,F.part,F.prod,F.store,F.status].filter(function(v){return v!=="ALL";}).length;
   if(scopeVal()!=="ALL") actF++;
   $("filterCount").textContent=actF?actF+" filter aktif · "+fmtInt(agg.totN)+" polis":"Tanpa filter · "+fmtInt(agg.totN)+" polis";
   var sc=scopeLabel();
   $("periodSub").textContent=(labels.length?("Periode tampil: "+labels[0]+" → "+labels[labels.length-1]):"Periode kosong")+(sc?" · "+sc:"")+" · Sumber: Data-raw.xlsx ("+fmtInt(DATA.facts.length)+" baris)";
-  $("metaLine").textContent="Dibuat "+(DATA.meta&&DATA.meta.generated?DATA.meta.generated:"")+" · NoP=SUM(NoP) · GWP=SUM(gwp) · Target: "+((DATA.targetMeta&&DATA.targetMeta.source)||"Target.xlsx")+" ("+((DATA.target&&DATA.target.length)||0)+" store, Okt-2026 per 15 Okt)";
+  $("metaLine").textContent="Dibuat "+(DATA.meta&&DATA.meta.generated?DATA.meta.generated:"")+" · NoP=SUM(NoP) · GWP=SUM(gwp) · Target: "+((DATA.targetMeta&&DATA.targetMeta.source)||"Target.xlsx")+" ("+((DATA.target&&DATA.target.length)||0)+" store, bulan "+((DATA.targetMeta&&DATA.targetMeta.month)||"—")+" s/d tgl "+elapsedOf()+")";
 }
 function scopeLabel(){
   var v=scopeVal();
@@ -328,10 +429,29 @@ function selNorm(list, val){
   if(isBlankEntry(e)) return "";
   return norm(clean(e));
 }
+function targetFilterRows(){
+  if(!DATA.target) return [];
+  var selStore=selNorm(DATA.store,F.store), selPart=selNorm(DATA.partner,F.part);
+  var scSpa=ROUTE==="spa"?selNorm(DATA.spa,SCOPE.spa):null;
+  var scPa=ROUTE==="pa"?selNorm(DATA.pa,SCOPE.pa):null;
+  var scProm=ROUTE==="promotor"?selNorm(DATA.prom,SCOPE.prom):null;
+  return DATA.target.filter(function(t){
+    if(selStore!==null&&norm(t.s)!==selStore) return false;
+    if(selPart!==null&&norm(t.p||"")!==selPart) return false;
+    if(scSpa!==null&&norm(t.spa||"")!==scSpa) return false;
+    if(scPa!==null&&norm(t.pa||"")!==scPa) return false;
+    if(scProm!==null&&norm(t.pr||"")!==scProm) return false;
+    return true;
+  });
+}
 function renderTarget(){
   if(!$("tgtTable")||!DATA.target||!DATA.target.length||!DATA.targetMeta) return;
   var st=TGT[ROUTE];
-  var tm=DATA.targetMeta, octIdx=DATA.months.indexOf(tm.month), fac=tm.factor||(31/15);
+  var tm=DATA.targetMeta, octIdx=DATA.months.indexOf(tm.month);
+  var dim=tm.daysInMonth||daysInMonthOf(tm.month);
+  var elapsed=(DATA.monthLastDay&&DATA.monthLastDay[octIdx])||tm.lastDay||dim;
+  if(elapsed<=0) elapsed=dim;
+  var fac=dim/elapsed;
   var selStore=selNorm(DATA.store,F.store), selPart=selNorm(DATA.partner,F.part);
   var scSpa=ROUTE==="spa"?selNorm(DATA.spa,SCOPE.spa):null;
   var scPa=ROUTE==="pa"?selNorm(DATA.pa,SCOPE.pa):null;
@@ -356,14 +476,7 @@ function renderTarget(){
       act[sn].n+=f[11]; act[sn].g+=f[10];
     }
   }
-  var rows=DATA.target.filter(function(t){
-    if(selStore!==null&&norm(t.s)!==selStore) return false;
-    if(selPart!==null&&norm(t.p||"")!==selPart) return false;
-    if(scSpa!==null&&norm(t.spa||"")!==scSpa) return false;
-    if(scPa!==null&&norm(t.pa||"")!==scPa) return false;
-    if(scProm!==null&&norm(t.pr||"")!==scProm) return false;
-    return true;
-  }).map(function(t){
+  var rows=targetFilterRows().map(function(t){
     var a=act[norm(t.s)]||{n:0,g:0};
     var hasT=(t.tg||0)>0||(t.tn||0)>0;
     var achN=t.tn>0?a.n/t.tn:NaN, achG=t.tg>0?a.g/t.tg:NaN;
@@ -383,12 +496,13 @@ function renderTarget(){
   var achN=tN>0?aN/tN:NaN, achG=tG>0?aG/tG:NaN, eNt=aN*fac, eGt=aG*fac;
   var estAN=tN>0?eNt/tN:NaN, estAG=tG>0?eGt/tG:NaN;
   $("tgtKpis").innerHTML=
-    '<div class="kpi"><div class="t">Ach NoP (15 Okt)</div><div class="v">'+(isFinite(achN)?(achN*100).toLocaleString("id-ID",{maximumFractionDigits:1})+"%":"—")+'</div><div class="d flat">'+fmtInt(aN)+' / '+fmtInt(tN)+'</div></div>'+
-    '<div class="kpi"><div class="t">Ach GWP (15 Okt)</div><div class="v">'+(isFinite(achG)?(achG*100).toLocaleString("id-ID",{maximumFractionDigits:1})+"%":"—")+'</div><div class="d flat">'+fmtIDR(aG)+' / '+fmtIDR(tG)+'</div></div>'+
+    '<div class="kpi"><div class="t">Ach NoP (tgl '+elapsed+')</div><div class="v">'+(isFinite(achN)?(achN*100).toLocaleString("id-ID",{maximumFractionDigits:1})+"%":"—")+'</div><div class="d flat">'+fmtInt(aN)+' / '+fmtInt(tN)+'</div></div>'+
+    '<div class="kpi"><div class="t">Ach GWP (tgl '+elapsed+')</div><div class="v">'+(isFinite(achG)?(achG*100).toLocaleString("id-ID",{maximumFractionDigits:1})+"%":"—")+'</div><div class="d flat">'+fmtIDR(aG)+' / '+fmtIDR(tG)+'</div></div>'+
     '<div class="kpi"><div class="t">Est Ach NoP (EOM)</div><div class="v">'+(isFinite(estAN)?(estAN*100).toLocaleString("id-ID",{maximumFractionDigits:1})+"%":"—")+'</div><div class="d flat">est '+fmtInt(eNt)+'</div></div>'+
     '<div class="kpi"><div class="t">Est Ach GWP (EOM)</div><div class="v">'+(isFinite(estAG)?(estAG*100).toLocaleString("id-ID",{maximumFractionDigits:1})+"%":"—")+'</div><div class="d flat">est '+fmtIDR(eGt)+'</div></div>';
-  var pace=15/31;
-  $("tgtNote").textContent="Periode dikunci Okt-2026 · data per 15 Okt (pace linear "+(pace*100).toLocaleString("id-ID",{maximumFractionDigits:1})+"%) · estimasi EOM = aktual ×31/15 · mengikuti filter Store/Partner"+(extraActive?" · aktual juga difilter Produk/Insurance/Status (target tetap level store)":"")+" · "+rows.length+" store tampil.";
+  var pace=elapsed/dim;
+  var yLbl=ymLabel(tm.month);
+  $("tgtNote").textContent="Periode dikunci "+yLbl+" · data per tgl "+elapsed+" "+yLbl.split(" ")[0]+" (pace linear "+(pace*100).toLocaleString("id-ID",{maximumFractionDigits:1})+"%) · estimasi EOM = aktual ×"+(dim/elapsed).toLocaleString("id-ID",{maximumFractionDigits:2})+" · mengikuti filter Store/Partner"+(extraActive?" · aktual juga difilter Produk/Insurance/Status (target tetap level store)":"")+" · "+rows.length+" store tampil.";
   fr.sort(function(a,b){
     if(st.sort==="achLo") return (isFinite(a.achG)?a.achG:-1)-(isFinite(b.achG)?b.achG:-1);
     if(st.sort==="achHi") return (isFinite(b.achG)?b.achG:-1)-(isFinite(a.achG)?a.achG:-1);
@@ -420,13 +534,19 @@ function pageHTML(){
   h+='<section class="card"><div class="card-h row"><div><h2>Tren bulanan — NoP &amp; GWP</h2><p class="muted">NoP (batang) vs GWP (garis).</p></div>'+
      '<div class="tabs" id="monthTabs"><button data-m="both" class="on">Keduanya</button><button data-m="nop">NoP</button><button data-m="gwp">GWP</button></div></div>'+
      '<div id="monthlyChart" class="chart"></div><div class="legend"><span><i class="sw bar"></i>NoP</span><span><i class="sw line"></i>GWP (Rp)</span></div></section>';
+  h+='<section class="card"><div class="card-h row"><div><h2>Penjualan harian — <span id="dailyMonth">—</span></h2><p class="muted" id="dailyNote"></p></div></div>'+
+     '<div id="dailyChart" class="chart"></div><div class="legend"><span><i class="sw bar"></i>NoP</span><span><i class="sw line"></i>GWP (Rp)</span></div>'+
+     '<h3 class="sub-head">Kumulatif NoP — aktual vs pace target</h3><p class="muted" id="cumNote"></p>'+
+     '<div id="cumChart" class="chart"></div><div class="legend"><span><i class="sw line"></i>Kumulatif aktual</span><span id="cumPaceLegend"><i class="sw line dash"></i>Pace target</span></div></section>';
   if(ROUTE==="summary"){
     h+='<div class="cols2"><section class="card"><h2>Perbandingan tahunan</h2><p class="muted">Total NoP &amp; GWP per tahun (mengikuti filter).</p><div id="yearChart" class="chart"></div><div id="yearTable"></div></section>'+
        '<section class="card trend"><h2>Ringkasan tren</h2><p class="muted">Dihitung otomatis dari data terfilter.</p><div id="trendCards" class="trend-cards"></div><ul id="trendList" class="trend-list"></ul></section></div>';
   } else {
     h+='<section class="card trend"><h2>Ringkasan tren</h2><p class="muted">Dihitung otomatis dari data terfilter.</p><div id="trendCards" class="trend-cards"></div><ul id="trendList" class="trend-list"></ul></section>';
   }
-  h+='<section class="card" id="tgtSec"><div class="card-h row"><div><h2>Target vs Achievement — Okt 2026 <span class="muted-sm">data per 15 Okt</span></h2><p class="muted" id="tgtNote"></p></div>'+
+  var tmLbl=(DATA.targetMeta&&DATA.targetMeta.month)?ymLabel(DATA.targetMeta.month):"—";
+  var el0=elapsedOf();
+  h+='<section class="card" id="tgtSec"><div class="card-h row"><div><h2>Target vs Achievement — '+tmLbl+' <span class="muted-sm">data per tgl '+(el0||"—")+'</span></h2><p class="muted" id="tgtNote"></p></div>'+
      '<div class="tabs" id="tgtTabs"><button data-t="all" class="on">Semua</button><button data-t="behind">Belum 100%</button><button data-t="done">Tercapai</button></div></div>'+
      '<div class="kpis" id="tgtKpis" style="margin-top:12px"></div>'+
      '<div class="tgt-controls"><input id="tgtSearch" type="search" placeholder="Cari store / PA…"><select id="tgtSort"><option value="tg">Urut: Target GWP terbesar</option><option value="achLo">Urut: Achievement GWP terendah</option><option value="achHi">Urut: Achievement GWP tertinggi</option><option value="gap">Urut: Selisih GWP terbesar</option></select></div>'+

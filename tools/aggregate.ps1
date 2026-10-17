@@ -12,6 +12,9 @@ $tmptJ = Join-Path $env:TEMP "opencode\targets.json"
 $out = Join-Path $root "dashboard\data\summary.json"
 $js  = Join-Path $root "dashboard\data\summary.js"
 
+# Bulan target yang dipakai sebagai pembanding (sesuai isi Target.xlsx)
+$tgtMonth = "2026-10"
+
 if (!(Test-Path $src)) { throw "Tidak ketemu: $src" }
 Copy-Item -LiteralPath $src -Destination $tmp -Force
 Add-Type -Path (Join-Path $root "tools\XlsxAgg.cs") -ReferencedAssemblies @("System.IO.Compression.FileSystem","System.Xml","System.IO.Compression")
@@ -23,8 +26,26 @@ if (Test-Path $tgt) {
   Copy-Item -LiteralPath $tgt -Destination $tmpt -Force
   Add-Type -Path (Join-Path $root "tools\TargetExport.cs") -ReferencedAssemblies @("System.IO.Compression.FileSystem","System.Xml","System.IO.Compression")
   Write-Output ([TargetExport]::Run($tmpt, $tmptJ))
+
+  # Baca daftar bulan + hari terakhir yang ada datanya (di awal file JSON)
+  $head = New-Object System.IO.StreamReader($out)
+  $buf = New-Object char[] 262144
+  $n = $head.Read($buf, 0, $buf.Length)
+  $head.Close()
+  $snip = New-Object string($buf, 0, $n)
+  $months = ([regex]::Match($snip, '"months":\[([^\]]*)\]')).Groups[1].Value -replace '"','' -split ','
+  $lasts  = ([regex]::Match($snip, '"monthLastDay":\[([^\]]*)\]')).Groups[1].Value -split ','
+  $idx = [array]::IndexOf($months, $tgtMonth)
+  if ($idx -lt 0) { throw "Bulan target $tgtMonth tidak ada di data" }
+  $elapsed = [int]$lasts[$idx]
+  $y = [int]$tgtMonth.Substring(0,4); $mo = [int]$tgtMonth.Substring(5,2)
+  $dim = [DateTime]::DaysInMonth($y, $mo)
+  if ($elapsed -le 0) { $elapsed = $dim }
+  $factor = [double]$dim / [double]$elapsed
+  $meta = '{"month":"' + $tgtMonth + '","source":"Target.xlsx","lastDay":' + $elapsed + ',"daysInMonth":' + $dim + ',"factor":' + $factor.ToString("0.############", [System.Globalization.CultureInfo]::InvariantCulture) + '}'
+  Write-Output ("target unit: bulan " + $tgtMonth + " s/d tgl " + $elapsed + " dari " + $dim + " hari (faktor " + $factor.ToString("0.####") + ")")
+
   $t = Get-Content $tmptJ -Raw
-  $meta = '{"month":"2026-10","cutoff":"2026-10-15","elapsed":15,"daysInMonth":31,"factor":2.066666666666667,"source":"Target.xlsx"}'
   $fs = New-Object System.IO.FileStream($out, [System.IO.FileMode]::Open, [System.IO.FileAccess]::ReadWrite)
   $fs.Seek(-1, [System.IO.SeekOrigin]::End) | Out-Null
   $add = ',"target":' + $t + ',"targetMeta":' + $meta + '}'
