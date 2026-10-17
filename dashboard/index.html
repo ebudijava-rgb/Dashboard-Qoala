@@ -18,6 +18,11 @@
       <a href="#/pa" data-route="pa"><span class="dot"></span>PA</a>
       <a href="#/promotor" data-route="promotor"><span class="dot"></span>Promotor</a>
     </nav>
+    <div class="side-user" id="sideUser" hidden>
+      <div class="su-name" id="suName"></div>
+      <div class="su-role" id="suRole"></div>
+      <button class="btn ghost sm" id="btnLogout" type="button">Keluar</button>
+    </div>
     <div class="side-foot" id="sideFoot"></div>
   </aside>
   <div class="scrim" id="scrim"></div>
@@ -41,6 +46,7 @@
     </header>
 
     <main class="wrap">
+      <div id="warnBar" class="warnbar" hidden></div>
       <section class="card filters">
         <div class="card-h">
           <h2>Filter</h2>
@@ -67,6 +73,19 @@
       <footer class="foot"><span id="metaLine"></span></footer>
     </main>
   </div>
+</div>
+
+<div id="login" class="login-wrap" hidden>
+  <form class="login-card" id="loginForm">
+    <span class="logo-badge login-logo"><img src="assets/logo.webp" alt="Qoala"></span>
+    <h2>Qoala Gadget Protection x MAP Tech</h2>
+    <p class="muted">Masuk untuk melihat dashboard</p>
+    <label>Email<input id="loginUser" type="text" placeholder="nama@qoala.id" autocomplete="username" spellcheck="false"></label>
+    <label>Password<input id="loginPass" type="password" placeholder="password" autocomplete="current-password"></label>
+    <div class="login-err" id="loginErr" role="alert"></div>
+    <button class="btn primary login-btn" id="loginBtn" type="submit">Masuk</button>
+    <p class="login-foot">Admin dapat melihat semua data · SPA / PA / Promotor hanya melihat data miliknya.</p>
+  </form>
 </div>
 
 <script src="data/summary.js"></script>

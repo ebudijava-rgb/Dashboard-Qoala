@@ -58,6 +58,7 @@ function scopeVal(){
 }
 function passFact(f, ignoreYearMonth){
   var ym=DATA.months[f[0]];
+  if(LOCK && String(f[LOCK.field])!==String(LOCK.idx)) return false;
   if(!ignoreYearMonth){
     if(F.year!=="ALL" && ym.slice(0,4)!==F.year) return false;
     if(F.month!=="ALL" && ym.slice(5,7)!==F.month) return false;
@@ -441,6 +442,7 @@ function targetFilterRows(){
   var scPa=ROUTE==="pa"?selNorm(DATA.pa,SCOPE.pa):null;
   var scProm=ROUTE==="promotor"?selNorm(DATA.prom,SCOPE.prom):null;
   return DATA.target.filter(function(t){
+    if(LOCK&&norm(t[LOCK.key]||"")!==norm(DATA[LOCK.list][LOCK.idx])) return false;
     if(selStore!==null&&norm(t.s)!==selStore) return false;
     if(selPart!==null&&norm(t.p||"")!==selPart) return false;
     if(selAm!==null&&norm(t.am||"")!==selAm) return false;
@@ -472,6 +474,7 @@ function renderTarget(){
     for(var k=0;k<facts.length;k++){
       var f=facts[k];
       if(f[0]!==octIdx) continue;
+      if(LOCK&&String(f[LOCK.field])!==String(LOCK.idx)) continue;
       if(F.prod!=="ALL"&&String(f[3])!==F.prod) continue;
       if(F.ins!=="ALL"&&String(f[1])!==F.ins) continue;
       if(F.status!=="ALL"&&String(f[5])!==F.status) continue;
@@ -576,6 +579,8 @@ function pageHTML(){
 function pageHeadHTML(){
   var p=PAGES[ROUTE];
   if(!p.scope) return '<div class="pagehead"><h2>'+p.title+'</h2></div>';
+  if(LOCK && LOCK.route===ROUTE)
+    return '<div class="pagehead"><h2>'+p.title+'</h2><span class="scopelock">'+esc(p.label.replace("Pilih ",""))+': <b>'+esc(LOCK.name)+'</b> · terkunci</span></div>';
   var list=DATA[p.list]||[];
   var cur=p.scope==="spa"?SCOPE.spa:p.scope==="pa"?SCOPE.pa:SCOPE.prom;
   var opts='<option value="ALL">Semua '+p.title+'</option>'+list.map(function(v,i){return '<option value="'+i+'"'+(String(i)===cur?" selected":"")+'>'+esc(clean(v))+'</option>';}).join("");
@@ -608,6 +613,10 @@ function bindPage(){
   });
 }
 function renderRoute(){
+  if(ALLOWED_ROUTES.indexOf(ROUTE)<0){
+    ROUTE=ALLOWED_ROUTES[ALLOWED_ROUTES.length-1]||"summary";
+    if(location.hash!=="#/"+ROUTE) location.hash="#/"+ROUTE;
+  }
   document.querySelectorAll(".side-nav a").forEach(function(a){
     a.classList.toggle("on", a.dataset.route===ROUTE);
   });
@@ -615,9 +624,7 @@ function renderRoute(){
   $("pageTitle").textContent=BRAND;
   $("eyebrow").textContent="SALES MONITORING · "+((PAGES[ROUTE]&&PAGES[ROUTE].title||"Summary").toUpperCase());
   var spaRoute=(ROUTE==="spa"), paRoute=(ROUTE==="pa"), promRoute=(ROUTE==="promotor");
-  var lblSpa=$("lblSpa"); if(lblSpa) lblSpa.style.display=spaRoute?"none":"";
-  var lblPa=$("lblPa"); if(lblPa) lblPa.style.display=paRoute?"none":"";
-  var lblProm=$("lblProm"); if(lblProm) lblProm.style.display=promRoute?"none":"";
+  syncOrgFilters();
   if(spaRoute&&F.spa!=="ALL"){ F.spa="ALL"; if($("fSpa")) $("fSpa").value="ALL"; }
   if(paRoute&&F.pa!=="ALL"){ F.pa="ALL"; if($("fPa")) $("fPa").value="ALL"; }
   if(promRoute&&F.prom!=="ALL"){ F.prom="ALL"; if($("fProm")) $("fProm").value="ALL"; }
@@ -629,8 +636,131 @@ function renderRoute(){
   window.scrollTo(0,0);
 }
 
+/* ================= LOGIN + PEMBATASAN SCOPE =================
+   Password disimpan sebagai hash FNV-1a 32-bit (hex) di data/summary.js.
+   Ini gerbang akses, bukan keamanan sungguhan: seluruh data tetap ada di file JSON. */
+var USER=null, LOCK=null, ALLOWED_ROUTES=["summary","spa","pa","promotor"];
+function hashPw(s){
+  var h=2166136261>>>0; s=String(s==null?"":s);
+  for(var i=0;i<s.length;i++){ h=(h^s.charCodeAt(i))>>>0; h=Math.imul(h,16777619)>>>0; }
+  var x=(h>>>0).toString(16); while(x.length<8) x="0"+x; return x;
+}
+function firstTok(s){ return (norm(s).split(" ")[0]||""); }
+function levSim(a,b){
+  var m=a.length,n=b.length; if(!m||!n) return (m===n)?1:0;
+  var prev=[],cur=[],i,j;
+  for(j=0;j<=n;j++) prev[j]=j;
+  for(i=1;i<=m;i++){
+    cur[0]=i;
+    for(j=1;j<=n;j++){
+      cur[j]=Math.min(prev[j]+1,cur[j-1]+1,prev[j-1]+(a.charCodeAt(i-1)===b.charCodeAt(j-1)?0:1));
+    }
+    var t=prev; prev=cur; cur=t;
+  }
+  return 1-prev[n]/Math.max(m,n);
+}
+function findScopeIdx(arr,name){
+  var n=norm(name); if(!n||!arr) return -1;
+  var ft=firstTok(name), cand=-1, i;
+  for(i=0;i<arr.length;i++){
+    var e=arr[i]; if(isBlankEntry(e)) continue;
+    var v=norm(e);
+    if(v===n) return i;
+    if(cand<0 && (v.indexOf(n)===0 || n.indexOf(v)===0 || firstTok(e)===ft)) cand=i;
+  }
+  if(cand>=0) return cand;
+  /* toleransi salah ketik: ambil kandidat terdekat bila jelas paling mirip */
+  var best=-1,bs=0,second=0;
+  for(i=0;i<arr.length;i++){
+    var e2=arr[i]; if(isBlankEntry(e2)) continue;
+    var s=levSim(n,norm(e2));
+    if(s>bs){ second=bs; bs=s; best=i; } else if(s>second) second=s;
+  }
+  if(best>=0 && bs>=0.82 && (bs-second)>=0.08) return best;
+  return -1;
+}
+function findUser(login){
+  var l=norm(login), us=(DATA&&DATA.users)||[];
+  for(var i=0;i<us.length;i++){ if(norm(us[i].u)===l) return us[i]; }
+  return null;
+}
+function applyUser(u){
+  USER=u||null; LOCK=null; ALLOWED_ROUTES=["summary","spa","pa","promotor"];
+  var warn="";
+  if(USER && norm(USER.r)!=="admin"){
+    var r=norm(USER.r);
+    var spec = r==="spa"?{list:"spa",field:7,tkey:"spa",route:"spa",level:1}
+             : r==="pa"?{list:"pa",field:8,tkey:"pa",route:"pa",level:2}
+             : {list:"prom",field:9,tkey:"pr",route:"promotor",level:3};
+    var arr=DATA[spec.list]||[], idx=findScopeIdx(arr,USER.n);
+    if(idx>=0){
+      LOCK={field:spec.field,key:spec.tkey,idx:idx,route:spec.route,level:spec.level,list:spec.list,name:clean(arr[idx])};
+      ALLOWED_ROUTES=["summary",LOCK.route];
+      F.am="ALL"; F.spa="ALL"; F.pa="ALL"; F.prom="ALL";
+    }else{
+      warn="Akun <b>"+esc(USER.n||USER.u)+"</b> ("+esc(USER.r)+") belum cocok dengan daftar "+spec.route+" pada data, jadi pembatasan data tidak diterapkan. Mohon periksa ejaan nama di Master_user.xlsx.";
+    }
+  }
+  applyAccessUI();
+  var wb=$("warnBar");
+  if(wb){ if(warn){ wb.innerHTML=warn; wb.hidden=false; } else { wb.innerHTML=""; wb.hidden=true; } }
+}
+function applyAccessUI(){
+  document.querySelectorAll(".side-nav a").forEach(function(a){
+    a.style.display=ALLOWED_ROUTES.indexOf(a.dataset.route)>=0?"":"none";
+  });
+  var su=$("sideUser");
+  if(su){
+    if(USER){
+      su.hidden=false;
+      $("suName").textContent=USER.n||USER.u;
+      $("suRole").textContent=LOCK?(USER.r+" · akses terkunci"):(USER.r+" · akses semua data");
+    } else su.hidden=true;
+  }
+}
+function syncOrgFilters(){
+  var lvl=LOCK?LOCK.level:-1;
+  var hide={am:(LOCK&&lvl>=0),spa:(LOCK&&lvl>=1)||ROUTE==="spa",pa:(LOCK&&lvl>=2)||ROUTE==="pa",prom:(LOCK&&lvl>=3)||ROUTE==="promotor"};
+  var map={am:"lblAm",spa:"lblSpa",pa:"lblPa",prom:"lblProm"};
+  Object.keys(map).forEach(function(k){ var el=$(map[k]); if(el) el.style.display=hide[k]?"none":""; });
+}
+function enter(u,persist){
+  applyUser(u);
+  if(persist){ try{ sessionStorage.setItem("qoala.session",u.u); }catch(e){} }
+  var lg=$("login"); if(lg) lg.hidden=true;
+  var le=$("loginErr"); if(le){ le.textContent=""; le.classList.remove("on"); }
+  var lp=$("loginPass"); if(lp) lp.value="";
+  document.body.classList.remove("locked");
+  startDashboard();
+}
+function showLogin(msg){
+  var lg=$("login"); if(lg) lg.hidden=false;
+  document.body.classList.add("locked");
+  var e=$("loginErr");
+  if(e){ if(msg){ e.innerHTML=msg; e.classList.add("on"); } else { e.innerHTML=""; e.classList.remove("on"); } }
+  var iu=$("loginUser"); if(iu) iu.focus();
+}
+function doLogin(){
+  var u=findUser($("loginUser").value);
+  if(!u){ showLogin("Email tidak terdaftar."); return; }
+  if(u.h!==hashPw($("loginPass").value)){ showLogin("Password salah."); return; }
+  enter(u,true);
+}
+function doLogout(){
+  try{ sessionStorage.removeItem("qoala.session"); }catch(e){}
+  window.location.reload();
+}
+var _lf=$("loginForm"); if(_lf) _lf.addEventListener("submit",function(e){ e.preventDefault(); doLogin(); });
+var _lo=$("btnLogout"); if(_lo) _lo.addEventListener("click",doLogout);
+
 function init(){
   if(!DATA){ document.body.innerHTML="<p style='padding:24px'>data/summary.js tidak ditemukan. Buka via folder dashboard/ atau jalankan tools/aggregate.ps1.</p>"; return; }
+  if(!(DATA.users&&DATA.users.length)){ enter(null,false); return; }
+  var saved=null; try{ saved=sessionStorage.getItem("qoala.session"); }catch(e){}
+  var u=saved?findUser(saved):null;
+  if(u) enter(u,false); else showLogin("");
+}
+function startDashboard(){
   var years=[...new Set(DATA.months.map(function(m){return m.slice(0,4);}))].sort();
   var yEl=$("fYear"); yEl.innerHTML='<option value="ALL">Semua</option>'+years.map(function(y){return '<option>'+y+'</option>';}).join("");
   var mEl=$("fMonth"); mEl.innerHTML='<option value="ALL">Semua</option>'+MON.map(function(m,i){var v=String(i+1).padStart(2,"0");return '<option value="'+v+'">'+m+'</option>';}).join("");

@@ -1,6 +1,9 @@
 # File data mentah besar - tidak di-commit (tetap ada di komputer)
 Data-raw.xlsx
 
+# Master akun login (berisi password) - jangan di-commit
+Master_user.xlsx
+
 # Lock file sementara Excel
 ~$*
 

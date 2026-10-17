@@ -1,14 +1,17 @@
-# Regenerasi data dashboard dari Data-raw.xlsx + Target.xlsx (static, tanpa Python)
+# Regenerasi data dashboard dari Data-raw.xlsx + Target.xlsx + Master_user.xlsx (static, tanpa Python)
 # Cara pakai: powershell -ExecutionPolicy Bypass -File tools/aggregate.ps1
 $ErrorActionPreference = "Stop"
 $root = Split-Path (Split-Path $MyInvocation.MyCommand.Path -Parent) -Parent
 if (-not (Test-Path (Join-Path $root "Data-raw.xlsx"))) { $root = "D:\Project Dashboard" }
-$src = Join-Path $root "Data-raw.xlsx"
-$tgt = Join-Path $root "Target.xlsx"
-$tmp = Join-Path $env:TEMP "opencode\copy-raw.xlsx"
-$tmpt = Join-Path $env:TEMP "opencode\copy-target.xlsx"
+$src  = Join-Path $root "Data-raw.xlsx"
+$tgt  = Join-Path $root "Target.xlsx"
+$mus  = Join-Path $root "Master_user.xlsx"
+$tmp    = Join-Path $env:TEMP "opencode\copy-raw.xlsx"
+$tmpt   = Join-Path $env:TEMP "opencode\copy-target.xlsx"
+$tmpm   = Join-Path $env:TEMP "opencode\copy-master.xlsx"
 $tmpNew = Join-Path $env:TEMP "opencode\summary-new.json"
-$tmptJ = Join-Path $env:TEMP "opencode\targets.json"
+$tmptJ  = Join-Path $env:TEMP "opencode\targets.json"
+$tmpUJ  = Join-Path $env:TEMP "opencode\users.json"
 $out = Join-Path $root "dashboard\data\summary.json"
 $js  = Join-Path $root "dashboard\data\summary.js"
 
@@ -21,6 +24,8 @@ Add-Type -Path (Join-Path $root "tools\XlsxAgg.cs") -ReferencedAssemblies @("Sys
 $res = [XlsxAgg]::Run($tmp, $tmpNew)
 Write-Output $res
 Copy-Item $tmpNew $out -Force
+
+$extra = ""
 
 if (Test-Path $tgt) {
   Copy-Item -LiteralPath $tgt -Destination $tmpt -Force
@@ -44,16 +49,25 @@ if (Test-Path $tgt) {
   $factor = [double]$dim / [double]$elapsed
   $meta = '{"month":"' + $tgtMonth + '","source":"Target.xlsx","lastDay":' + $elapsed + ',"daysInMonth":' + $dim + ',"factor":' + $factor.ToString("0.############", [System.Globalization.CultureInfo]::InvariantCulture) + '}'
   Write-Output ("target unit: bulan " + $tgtMonth + " s/d tgl " + $elapsed + " dari " + $dim + " hari (faktor " + $factor.ToString("0.####") + ")")
+  $extra += ',"target":' + (Get-Content $tmptJ -Raw) + ',"targetMeta":' + $meta
+} else { Write-Output "Target.xlsx tidak ada - lanjut tanpa target" }
 
-  $t = Get-Content $tmptJ -Raw
+if (Test-Path $mus) {
+  Copy-Item -LiteralPath $mus -Destination $tmpm -Force
+  Add-Type -Path (Join-Path $root "tools\UserExport.cs") -ReferencedAssemblies @("System.IO.Compression.FileSystem","System.Xml","System.IO.Compression")
+  Write-Output ([UserExport]::Run($tmpm, $tmpUJ))
+  $extra += ',"users":' + (Get-Content $tmpUJ -Raw)
+} else { Write-Output "Master_user.xlsx tidak ada - lanjut tanpa akun login" }
+
+if ($extra -ne "") {
   $fs = New-Object System.IO.FileStream($out, [System.IO.FileMode]::Open, [System.IO.FileAccess]::ReadWrite)
   $fs.Seek(-1, [System.IO.SeekOrigin]::End) | Out-Null
-  $add = ',"target":' + $t + ',"targetMeta":' + $meta + '}'
+  $add = $extra + '}'
   $bytes = (New-Object System.Text.UTF8Encoding($false)).GetBytes($add)
   $fs.Write($bytes, 0, $bytes.Length)
   $fs.Close()
-  Write-Output "target merged"
-} else { Write-Output "Target.xlsx tidak ada - lanjut tanpa target" }
+  Write-Output "extra merged"
+}
 
 # Bungkus JSON jadi JS agar bisa dibuka via file:// (double-click index.html)
 $sr = New-Object System.IO.StreamReader($out)
