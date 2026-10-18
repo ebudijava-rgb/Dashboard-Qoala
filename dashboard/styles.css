@@ -81,7 +81,7 @@ thead th{background:#faf9f6;font-size:11.5px;text-transform:uppercase;letter-spa
 .tgt-controls input[type=search]{flex:2;min-width:200px;background:#faf9f6;border:1px solid var(--line);border-radius:10px;padding:9px 12px;font-size:13px}
 .tgt-controls select{flex:1;min-width:200px;background:#faf9f6;border:1px solid var(--line);border-radius:10px;padding:9px 10px;font-size:13px}
 .tgt-wrap{max-height:520px;overflow:auto;border:1px solid var(--line);border-radius:12px;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
-table.tgt{font-size:12.5px;min-width:1080px}
+table.tgt{font-size:12.5px;min-width:1100px}
 table.tgt th{position:sticky;top:0;background:var(--navy);color:#fff;z-index:2;font-size:11px}
 table.tgt th.sticky,table.tgt td.sticky{position:sticky;left:0;background:#fff;z-index:1;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 table.tgt thead th.sticky{z-index:3;background:var(--navy);color:#fff}
@@ -188,7 +188,7 @@ input,select,textarea,button{font-family:inherit}
   .tgt-controls{gap:8px}
   .tgt-controls input[type=search],.tgt-controls select{flex:1 1 100%;min-width:0}
   .tgt-wrap{max-height:60vh}
-  table.tgt{min-width:880px;font-size:12px}
+  table.tgt{min-width:940px;font-size:12px}
   table.tgt th.sticky,table.tgt td.sticky{max-width:116px}
   .ach-list{max-height:none;overflow:visible;padding-right:0}
   .bar-row{font-size:12.5px;margin:11px 0}
