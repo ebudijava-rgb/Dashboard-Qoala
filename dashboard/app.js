@@ -480,6 +480,33 @@ function msDimItems(list){
   return (list||[]).map(function(v,i){ return {v:String(i),t:clean(v)}; });
 }
 
+/* --- MoM bulan terakhir ---------------------------------------------------
+   Bulan berjalan datanya belum penuh (baru s/d tanggal tertentu), jadi kalau
+   dibandingkan apa adanya dengan bulan sebelumnya yang sudah penuh, hasilnya
+   selalu kelihatan turun. Karena itu untuk bulan berjalan dipakai ESTIMASI EOM
+   (aktual x hari dalam bulan / hari berjalan) supaya perbandingannya apple-to-apple. */
+function momInfo(series, vis){
+  var nz=vis.filter(function(i){return series[i]>0;});
+  var o={pct:NaN, est:false, fac:1, li:(nz.length?nz[nz.length-1]:-1), pi:(nz.length>1?nz[nz.length-2]:-1)};
+  if(nz.length<2) return o;
+  var ym=DATA.months[o.li], dim=daysInMonthOf(ym);
+  var el=(DATA.monthLastDay&&DATA.monthLastDay[o.li])||0;
+  if(el<=0) el=dim;
+  o.ym=ym; o.prevYm=DATA.months[o.pi]; o.dim=dim; o.elapsed=el;
+  o.est=el<dim; o.fac=o.est?dim/el:1;
+  o.cur=series[o.li]; o.prev=series[o.pi]; o.curEst=o.cur*o.fac;
+  o.pct=o.prev>0?((o.curEst-o.prev)/o.prev):NaN;
+  return o;
+}
+function delta(o, fmt){
+  var v=o.pct, c=!isFinite(v)?"flat":(v>0.0005?"up":(v<-0.0005?"down":"flat"));
+  var tip;
+  if(!isFinite(v)) tip="Belum ada bulan pembanding.";
+  else if(o.est) tip="Bulan berjalan "+ymLabel(o.ym)+" memakai estimasi EOM: "+fmt(o.curEst)+" (aktual s/d tgl "+o.elapsed+" = "+fmt(o.cur)+" x "+(o.dim/o.elapsed).toLocaleString("id-ID",{maximumFractionDigits:2})+") dibanding "+ymLabel(o.prevYm)+" aktual: "+fmt(o.prev)+".";
+  else tip=ymLabel(o.prevYm)+" → "+ymLabel(o.ym)+" aktual: "+fmt(o.prev)+" → "+fmt(o.cur)+".";
+  return '<div class="d '+c+'" title="'+esc(tip)+'">'+fmtPct(v)+' MoM'+(o.est?' <span class="est-tag">est EOM</span>':'')+'</div>';
+}
+
 function render(agg){
   var vis=visibleMonths();
   var labels=vis.map(function(i){return ymLabel(DATA.months[i]);});
@@ -487,17 +514,11 @@ function render(agg){
   var gwp=vis.map(function(i){return agg.mGwp[i];});
   var active=vis.filter(function(i){return agg.mNop[i]>0;}).length;
   var avg=agg.totN?agg.totG/agg.totN:0;
-  var nzNop=nop.filter(function(v){return v>0;});
-  var last=nzNop.length?nzNop[nzNop.length-1]:0, prev=nzNop.length>1?nzNop[nzNop.length-2]:0;
-  var momN=(prev>0)?(last-prev)/prev:NaN;
-  var gnz=gwp.filter(function(v){return v>0;});
-  var lastG=gnz.length?gnz[gnz.length-1]:0, prevG=gnz.length>1?gnz[gnz.length-2]:0;
-  var momG=(prevG>0)?(lastG-prevG)/prevG:NaN;
-  function delta(v){ var c=!isFinite(v)?"flat":(v>0.0005?"up":(v<-0.0005?"down":"flat")); return '<div class="d '+c+'">'+fmtPct(v)+' MoM</div>'; }
+  var momN=momInfo(agg.mNop,vis), momG=momInfo(agg.mGwp,vis);
   var scopeName=scopeLabel();
   $("kpis").innerHTML=
-    '<div class="kpi"><div class="t">Total NoP'+scopeName+'</div><div class="v">'+fmtInt(agg.totN)+'</div>'+delta(momN)+'</div>'+
-    '<div class="kpi"><div class="t">Total GWP'+scopeName+'</div><div class="v">'+fmtIDR(agg.totG)+'</div>'+delta(momG)+'</div>'+
+    '<div class="kpi"><div class="t">Total NoP'+scopeName+'</div><div class="v">'+fmtInt(agg.totN)+'</div>'+delta(momN,fmtInt)+'</div>'+
+    '<div class="kpi"><div class="t">Total GWP'+scopeName+'</div><div class="v">'+fmtIDR(agg.totG)+'</div>'+delta(momG,fmtIDR)+'</div>'+
     '<div class="kpi"><div class="t">Rata-rata / polis</div><div class="v">'+fmtIDR(avg)+'</div><div class="d flat">'+active+' bulan aktif</div></div>'+
     '<div class="kpi"><div class="t">Periode tampil</div><div class="v" style="font-size:17px">'+(labels.length?(labels[0]+" → "+labels[labels.length-1]):"—")+'</div><div class="d flat">'+fmtInt(agg.totN/Math.max(active,1))+' polis/bln · '+fmtIDR(agg.totG/Math.max(active,1))+'/bln</div></div>';
   if($("monthlyChart")){
@@ -579,8 +600,9 @@ function renderTrend(agg,vis){
   if(!nz.length){ $("trendCards").innerHTML=""; $("trendList").innerHTML="<li>Tidak ada data pada filter ini.</li>"; return; }
   var avgN=agg.totN/Math.max(nz.length,1), avgG=agg.totG/Math.max(nz.length,1);
   var l1=nz[nz.length-1],l0=nz.length>1?nz[nz.length-2]:null;
-  var momNt=l0!=null&&agg.mNop[l0]>0?(agg.mNop[l1]-agg.mNop[l0])/agg.mNop[l0]:NaN;
-  var momGt=l0!=null&&agg.mGwp[l0]>0?(agg.mGwp[l1]-agg.mGwp[l0])/agg.mGwp[l0]:NaN;
+  /* MoM & YoY bulan terakhir: kalau bulan berjalan belum penuh, pakai estimasi EOM */
+  var tN=momInfo(agg.mNop,vis), tG=momInfo(agg.mGwp,vis);
+  var momNt=tN.pct, momGt=tG.pct, momEst=(tG.est||tN.est);
   var lastYm=DATA.months[l1], mm=lastYm.slice(5,7), y0=String(+lastYm.slice(0,4)-1), ym0=y0+"-"+mm;
   var i0=DATA.months.indexOf(ym0);
   var yoyNt=NaN,yoyGt=NaN;
@@ -592,18 +614,19 @@ function renderTrend(agg,vis){
       if(ym===lastYm){t1.n+=f[11];t1.g+=f[10];}
       if(ym===ym0){t0.n+=f[11];t0.g+=f[10];}
     }
-    if(t0.n>0)yoyNt=(t1.n-t0.n)/t0.n;
-    if(t0.g>0)yoyGt=(t1.g-t0.g)/t0.g;
+    var facY=tG.est?tG.fac:1; /* bulan berjalan (belum penuh) -> estimasi EOM */
+    if(t0.n>0)yoyNt=(t1.n*facY-t0.n)/t0.n;
+    if(t0.g>0)yoyGt=(t1.g*facY-t0.g)/t0.g;
   }
   cards.push({t:"Bulan terbaik (GWP)",v:ymLabel(DATA.months[bi])+" · "+fmtIDR(bg)});
-  cards.push({t:"MoM terakhir",v:fmtPct(momGt)+" GWP · "+fmtPct(momNt)+" NoP"});
-  cards.push({t:"YoY "+ymLabel(lastYm)+(i0>=0?" vs "+ymLabel(ym0):""),v:(isFinite(yoyGt)?fmtPct(yoyGt)+" GWP":"—")+" · "+(isFinite(yoyNt)?fmtPct(yoyNt)+" NoP":"—")});
+  cards.push({t:"MoM terakhir"+(momEst?" (est EOM)":""),v:fmtPct(momGt)+" GWP · "+fmtPct(momNt)+" NoP"});
+  cards.push({t:"YoY "+ymLabel(lastYm)+(i0>=0?" vs "+ymLabel(ym0):"")+(momEst?" (est EOM)":""),v:(isFinite(yoyGt)?fmtPct(yoyGt)+" GWP":"—")+" · "+(isFinite(yoyNt)?fmtPct(yoyNt)+" NoP":"—")});
   cards.push({t:"Rata-rata / bulan aktif",v:fmtInt(avgN)+" polis · "+fmtIDR(avgG)});
   $("trendCards").innerHTML=cards.map(function(c){return '<div class="tc"><div class="t">'+c.t+'</div><div class="v">'+esc(c.v)+'</div></div>';}).join("");
   items.push("Total <b>"+fmtInt(agg.totN)+"</b> polis dengan GWP <b>"+fmtIDR(agg.totG)+"</b> pada "+vis.length+" bulan tampil ("+nz.length+" bulan aktif).");
   items.push("Bulan tertinggi GWP: <b>"+ymLabel(DATA.months[bi])+"</b> ("+fmtInt(agg.mNop[bi])+" polis, "+fmtIDR(agg.mGwp[bi])+"). Terendah: <b>"+ymLabel(DATA.months[wi])+"</b> ("+fmtIDR(agg.mGwp[wi])+").");
-  if(l0!=null) items.push("Perubahan bulan terakhir ("+ymLabel(DATA.months[l0])+" → "+ymLabel(DATA.months[l1])+"): NoP <b>"+fmtPct(momNt)+"</b>, GWP <b>"+fmtPct(momGt)+"</b>.");
-  if(i0>=0&&isFinite(yoyGt)) items.push("Year-on-year "+ymLabel(ym0)+" → "+ymLabel(lastYm)+": NoP <b>"+fmtPct(yoyNt)+"</b>, GWP <b>"+fmtPct(yoyGt)+"</b> (filter non-tahun sama).");
+  if(l0!=null) items.push("Perubahan bulan terakhir ("+ymLabel(DATA.months[l0])+" → "+ymLabel(DATA.months[l1])+"): NoP <b>"+fmtPct(momNt)+"</b>, GWP <b>"+fmtPct(momGt)+"</b>"+(momEst?(" — bulan berjalan "+ymLabel(DATA.months[l1])+" dihitung dari estimasi EOM: "+fmtInt(tN.curEst)+" polis / "+fmtIDR(tG.curEst)+" vs "+ymLabel(DATA.months[l0])+" aktual "+fmtInt(tN.prev)+" polis / "+fmtIDR(tG.prev)):"")+".");
+  if(i0>=0&&isFinite(yoyGt)) items.push("Year-on-year "+ymLabel(ym0)+" → "+ymLabel(lastYm)+": NoP <b>"+fmtPct(yoyNt)+"</b>, GWP <b>"+fmtPct(yoyGt)+"</b>"+(momEst?" (bulan berjalan pakai estimasi EOM)":"")+" (filter non-tahun sama).");
   var tp=topEntries(agg.byProd,1)[0],ts=topEntries(agg.byStore,1)[0],ta=topEntries(agg.byPa,1)[0],tn=topEntries(agg.byPart,1)[0];
   if(tp) items.push("Produk dominan: <b>"+esc(tp.k)+"</b> ("+fmtIDR(tp.g)+", "+fmtInt(tp.n)+" polis).");
   if(ts) items.push("Store dominan: <b>"+esc(ts.k)+"</b> ("+fmtIDR(ts.g)+").");
