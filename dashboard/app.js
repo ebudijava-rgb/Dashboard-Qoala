@@ -30,7 +30,9 @@ function elapsedOf(){
 function esc(s){ return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
 function $(id){ return document.getElementById(id); }
 
-/* fakta: [mi,ins,part,prod,store,status,am,spa,pa,prom,gwp,nop] */
+/* fakta: [mi,ins,part,prod,store,status,am,spa,pa,prom,gwp,nop,day,brand,cat,dur]
+   brand = indeks DATA.brand (device brand), cat = DATA.cat (kategori perangkat),
+   dur = DATA.dur (durasi polis dalam bulan) — dipakai kartu Kontribusi. */
 /* setiap filter = array pilihan (multi-pilih). array kosong = semua */
 var F = {year:[],month:[],ins:[],part:[],am:[],spa:[],pa:[],prom:[],prod:[],store:[],status:[]};
 function fAll(v){ return !v||v.length===0; }
@@ -48,7 +50,11 @@ var PAGES = {
 };
 var BREAKS = {
   summary:[{id:"B1",t:"Top produk",map:"byProd"},{id:"B2",t:"Top store",map:"byStore"},{id:"B3",t:"Top PA",map:"byPa"}],
-  spa:[{id:"B1",t:"Top area_manager",map:"byAm"},{id:"B2",t:"Top PA",map:"byPa"},{id:"B3",t:"Top Promotor",map:"byProm"}],
+  spa:[{id:"B1",t:"Top area_manager",map:"byAm"},{id:"B2",t:"Top PA",map:"byPa"},{id:"B3",t:"Top Promotor",map:"byProm"},
+       {id:"B4",t:"Kontribusi by produk <span class='muted-sm'>(12/18/24 bulan)</span>",map:"byProd",c:1,half:1},
+       {id:"B5",t:"Kontribusi by durasi polis <span class='muted-sm'>(6/12/18/24/36 bulan)</span>",map:"byDurM",c:1,half:1,m:1},
+       {id:"B6",t:"Kontribusi by brand <span class='muted-sm'>(Apple, Samsung, dll)</span>",map:"byBrandM",c:1,half:1,m:1},
+       {id:"B7",t:"Kontribusi by kategori perangkat <span class='muted-sm'>(smartphone, watch, dll)</span>",map:"byCatM",c:1,half:1,m:1}],
   pa:[{id:"B1",t:"Top produk",map:"byProd"},{id:"B2",t:"Top store",map:"byStore"},{id:"B3",t:"Top Promotor",map:"byProm"}],
   promotor:[{id:"B1",t:"Top produk",map:"byProd"},{id:"B2",t:"Top store",map:"byStore"}]
 };
@@ -87,7 +93,7 @@ function aggregate(){
   var byYear={}, byProd={}, byStore={}, byPart={}, byStatus={}, byIns={};
   var byAm={}, bySpa={}, byPa={}, byProm={};
   /* byProdM/byStoreM = khusus bulan berjalan (bulan terakhir yang lolos filter) */
-  var byProdM={}, byStoreM={};
+  var byProdM={}, byStoreM={}, byBrandM={}, byCatM={}, byDurM={};
   var visM=visibleMonths(), miF=visM.length?visM[visM.length-1]:-1;
   var totN=0, totG=0;
   var facts=DATA.facts;
@@ -101,13 +107,18 @@ function aggregate(){
     addM(byProd,clean(DATA.product[f[3]]),f); addM(byStore,clean(DATA.store[f[4]]),f);
     if(f[0]===miF){
       addM(byProdM,clean(DATA.product[f[3]]),f); addM(byStoreM,clean(DATA.store[f[4]]),f);
+      /* kontribusi (bulan berjalan): brand, kategori perangkat, durasi polis */
+      addM(byBrandM,clean((DATA.brand||[])[f[13]])||"(tanpa brand)",f);
+      addM(byCatM,clean((DATA.cat||[])[f[14]])||"(tanpa kategori)",f);
+      var dv0=(DATA.dur||[])[f[15]];
+      addM(byDurM, (dv0==null||dv0==="") ? "(tanpa durasi)" : (dv0+" bulan"), f);
     }
     addM(byPart,clean(DATA.partner[f[2]]),f); addM(byStatus,clean(DATA.status[f[5]]),f);
     addM(byIns,clean(DATA.insurance[f[1]]),f);
     addM(byAm,clean(DATA.am[f[6]]),f); addM(bySpa,clean(DATA.spa[f[7]]),f);
     addM(byPa,clean(DATA.pa[f[8]]),f); addM(byProm,clean(DATA.prom[f[9]]),f);
   }
-  return {mNop:mNop,mGwp:mGwp,byYear:byYear,byProd:byProd,byStore:byStore,byProdM:byProdM,byStoreM:byStoreM,miF:miF,byPart:byPart,byStatus:byStatus,byIns:byIns,byAm:byAm,bySpa:bySpa,byPa:byPa,byProm:byProm,totN:totN,totG:totG};
+  return {mNop:mNop,mGwp:mGwp,byYear:byYear,byProd:byProd,byStore:byStore,byProdM:byProdM,byStoreM:byStoreM,byBrandM:byBrandM,byCatM:byCatM,byDurM:byDurM,miF:miF,byPart:byPart,byStatus:byStatus,byIns:byIns,byAm:byAm,bySpa:bySpa,byPa:byPa,byProm:byProm,totN:totN,totG:totG};
 }
 function addM(map,key,f){ if(!map[key])map[key]={n:0,g:0}; map[key].n+=f[11]; map[key].g+=f[10]; }
 function visibleMonths(){
@@ -287,6 +298,26 @@ function barList(elId, entries){
     d.innerHTML='<span class="n">'+esc(e.k)+'</span><span class="v">'+fmtInt(e.n)+' · '+fmtIDR(e.g)+'</span><div class="bar-track"><div class="bar-fill" style="width:'+Math.max(2,(e.g/mx*100)).toFixed(1)+'%"></div></div>';
     el.appendChild(d);
   });
+}
+
+/* kontribusi (share) per dimensi — mengikuti filter yang aktif.
+   Basis share = GWP periode yang sama dengan baris yang ditampilkan,
+   ditampilkan juga share NoP-nya. */
+function contribList(elId, entries, baseG, baseN, note){
+  var el=$(elId); if(!el) return;
+  if(!entries.length){ el.innerHTML='<p class="muted">Tidak ada data pada filter ini.</p>'; return; }
+  var mx=entries[0].g||1, tot=baseG||0, totN=baseN||0;
+  var h='<p class="muted contrib-note">'+(note||"")+' Total: '+fmtIDR(tot)+' · '+fmtInt(totN)+' polis</p>';
+  entries.forEach(function(e){
+    var sh=tot>0?(e.g/tot*100):0, shN=totN>0?(e.n/totN*100):0;
+    h+='<div class="bar-row contrib">'+
+         '<span class="n" title="'+esc(e.k)+'">'+esc(e.k)+'</span>'+
+         '<span class="v">'+sh.toLocaleString("id-ID",{maximumFractionDigits:1})+'%</span>'+
+         '<div class="bar-track"><div class="bar-fill" style="width:'+Math.max(2,(e.g/mx*100)).toFixed(1)+'%"></div></div>'+
+         '<span class="v2">'+fmtInt(e.n)+' polis ('+shN.toLocaleString("id-ID",{maximumFractionDigits:1})+'%) · '+fmtIDR(e.g)+'</span>'+
+       '</div>';
+  });
+  el.innerHTML=h;
 }
 
 /* blok Top AM / Top PA / Top Promotor — mode bulan berjalan: aktual vs target.
@@ -507,7 +538,14 @@ function render(agg){
     else{
       var src=(b.map==="byProd")?agg.byProdM:(b.map==="byStore"?agg.byStoreM:agg[b.map]);
       var sub=$(b.id+"sub"); if(sub) sub.textContent=(agg.miF>=0?ymLabel(DATA.months[agg.miF]):"—");
-      barList(b.id, topEntries(src||{},8));
+      if(b.c){
+        var isM=(b.map==="byProd"||b.map==="byStore"||b.m===1);
+        contribList(b.id, topEntries(src||{},b.top||10),
+          isM?(agg.mGwp[agg.miF]||0):agg.totG,
+          isM?(agg.mNop[agg.miF]||0):agg.totN,
+          "Share GWP & polis "+(agg.miF>=0?ymLabel(DATA.months[agg.miF]):"—")+" — ikut semua filter aktif.");
+      }
+      else barList(b.id, topEntries(src||{},8));
     }
   });
   renderTrend(agg,vis);
@@ -747,13 +785,16 @@ function renderTarget(){
 
 /* ---- halaman ---- */
 function pageHTML(){
-  var breaks=(BREAKS[ROUTE]||[]).map(function(b){
+  var cards=(BREAKS[ROUTE]||[]).map(function(b){
     var isAch=(b.map==="byAm"||b.map==="byPa"||b.map==="byProm");
     var sub=isAch?"":' <span class="muted-sm" id="'+b.id+'sub"></span>';
-    return '<section class="card"><h2>'+b.t+sub+'</h2><div id="'+b.id+'"></div></section>';
+    return {html:'<section class="card"><h2>'+b.t+sub+'</h2><div id="'+b.id+'"></div></section>', half:!!b.half};
   });
-  var grid1=breaks.slice(0,2).join("");
-  var rest=breaks.slice(2).join("");
+  var grid1=cards.slice(0,2).map(function(c){return c.html;}).join("");
+  var rest="", buf=[];
+  function flush(){ if(buf.length){ rest+='<div class="cols2">'+buf.join("")+'</div>'; buf=[]; } }
+  cards.slice(2).forEach(function(c){ if(c.half) buf.push(c.html); else { flush(); rest+=c.html; } });
+  flush();
   var h='<section class="kpis" id="kpis"></section>';
   h+='<section class="card"><div class="card-h row"><div><h2>Tren bulanan — NoP &amp; GWP</h2><p class="muted">NoP (batang) vs GWP (garis).</p></div>'+
      '<div class="tabs" id="monthTabs"><button data-m="both" class="on">Keduanya</button><button data-m="nop">NoP</button><button data-m="gwp">GWP</button></div></div>'+

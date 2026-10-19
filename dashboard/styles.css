@@ -82,6 +82,9 @@ select{background:#faf9f6;border:1px solid var(--line);border-radius:10px;paddin
 .bar-row .n{font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .bar-row .v{color:var(--muted);font-variant-numeric:tabular-nums}
 .bar-row .v2{grid-column:1/-1;color:var(--muted);font-size:12px;font-variant-numeric:tabular-nums}
+/* kartu kontribusi (share %) */
+.contrib-note{margin:0 0 10px !important}
+.bar-row.contrib .v{font-weight:800;color:#44403c}
 .bar-track{position:relative}
 .bar-mark{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--navy);opacity:.45;border-radius:2px}
 .achv{font-weight:800;font-variant-numeric:tabular-nums;text-align:right}
