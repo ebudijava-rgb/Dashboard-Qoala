@@ -83,6 +83,9 @@ function aggregate(){
   var mNop=new Array(nM).fill(0), mGwp=new Array(nM).fill(0);
   var byYear={}, byProd={}, byStore={}, byPart={}, byStatus={}, byIns={};
   var byAm={}, bySpa={}, byPa={}, byProm={};
+  /* byProdM/byStoreM = khusus bulan berjalan (bulan terakhir yang lolos filter) */
+  var byProdM={}, byStoreM={};
+  var visM=visibleMonths(), miF=visM.length?visM[visM.length-1]:-1;
   var totN=0, totG=0;
   var facts=DATA.facts;
   for(var k=0;k<facts.length;k++){
@@ -93,12 +96,15 @@ function aggregate(){
     var y=DATA.months[f[0]].slice(0,4);
     if(!byYear[y]) byYear[y]={n:0,g:0}; byYear[y].n+=f[11]; byYear[y].g+=f[10];
     addM(byProd,clean(DATA.product[f[3]]),f); addM(byStore,clean(DATA.store[f[4]]),f);
+    if(f[0]===miF){
+      addM(byProdM,clean(DATA.product[f[3]]),f); addM(byStoreM,clean(DATA.store[f[4]]),f);
+    }
     addM(byPart,clean(DATA.partner[f[2]]),f); addM(byStatus,clean(DATA.status[f[5]]),f);
     addM(byIns,clean(DATA.insurance[f[1]]),f);
     addM(byAm,clean(DATA.am[f[6]]),f); addM(bySpa,clean(DATA.spa[f[7]]),f);
     addM(byPa,clean(DATA.pa[f[8]]),f); addM(byProm,clean(DATA.prom[f[9]]),f);
   }
-  return {mNop:mNop,mGwp:mGwp,byYear:byYear,byProd:byProd,byStore:byStore,byPart:byPart,byStatus:byStatus,byIns:byIns,byAm:byAm,bySpa:bySpa,byPa:byPa,byProm:byProm,totN:totN,totG:totG};
+  return {mNop:mNop,mGwp:mGwp,byYear:byYear,byProd:byProd,byStore:byStore,byProdM:byProdM,byStoreM:byStoreM,miF:miF,byPart:byPart,byStatus:byStatus,byIns:byIns,byAm:byAm,bySpa:bySpa,byPa:byPa,byProm:byProm,totN:totN,totG:totG};
 }
 function addM(map,key,f){ if(!map[key])map[key]={n:0,g:0}; map[key].n+=f[11]; map[key].g+=f[10]; }
 function visibleMonths(){
@@ -396,7 +402,11 @@ function render(agg){
   }
   (BREAKS[ROUTE]||[]).forEach(function(b){
     if(b.map==="byAm"||b.map==="byPa"||b.map==="byProm") renderAchBreak(b);
-    else barList(b.id, topEntries(agg[b.map]||{},8));
+    else{
+      var src=(b.map==="byProd")?agg.byProdM:(b.map==="byStore"?agg.byStoreM:agg[b.map]);
+      var sub=$(b.id+"sub"); if(sub) sub.textContent=(agg.miF>=0?ymLabel(DATA.months[agg.miF]):"—");
+      barList(b.id, topEntries(src||{},8));
+    }
   });
   renderTrend(agg,vis);
   renderTable(agg,vis);
@@ -601,7 +611,9 @@ function renderTarget(){
 /* ---- halaman ---- */
 function pageHTML(){
   var breaks=(BREAKS[ROUTE]||[]).map(function(b){
-    return '<section class="card"><h2>'+b.t+'</h2><div id="'+b.id+'"></div></section>';
+    var isAch=(b.map==="byAm"||b.map==="byPa"||b.map==="byProm");
+    var sub=isAch?"":' <span class="muted-sm" id="'+b.id+'sub"></span>';
+    return '<section class="card"><h2>'+b.t+sub+'</h2><div id="'+b.id+'"></div></section>';
   });
   var grid1=breaks.slice(0,2).join("");
   var rest=breaks.slice(2).join("");
