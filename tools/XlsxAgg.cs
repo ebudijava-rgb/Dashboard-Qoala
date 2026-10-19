@@ -7,7 +7,7 @@ using System.Xml;
 
 public static class XlsxAgg
 {
-    class Raw { public int a,c,i,j,am,ar,as_,at,au,p; public double gwp,nop; public int ao,ap; }
+    class Raw { public int a,c,i,j,am,ar,as_,at,au,p; public double gwp,nop; public int ao,ap; } // gwp = kolom X "after marketing support"
     // literal cache untuk kolom formula (AR/AS/AT/AU bertipe t="str" atau angka): kode negatif -(idx+2), -1 = kosong
     static int LitCode(Dictionary<string,int> lit, string v){ if(v==null) v=""; v=v.Trim(); if(v=="0") v=""; int i; if(lit.TryGetValue(v,out i)) return -(i+2); i=lit.Count; lit[v]=i; return -(i+2); }
     static string ColOf(string cellRef){ int k=0; while(k<cellRef.Length && !char.IsDigit(cellRef[k])) k++; return cellRef.Substring(0,k); }
@@ -73,10 +73,12 @@ public static class XlsxAgg
                         if(row.ContainsKey("AU")){ if(rowT["AU"]=="s"&&int.TryParse(row["AU"],out tmp)){r.au=tmp; siSets["AU"].Add(tmp);} else r.au=LitCode(litAu,row["AU"]); }
                         // P = policy start date (teks ISO / shared string)
                         if(row.ContainsKey("P")){ if(rowT["P"]=="s"&&int.TryParse(row["P"],out tmp)){r.p=tmp; siSets["P"].Add(tmp);} else r.p=LitCode(litP,row["P"]); }
-                        bool hasV=row.ContainsKey("V")&&row["V"]!="", hasQ=row.ContainsKey("AQ")&&row["AQ"]!="", hasM=row.ContainsKey("AO")&&row["AO"]!="";
-                        if(!hasV&&!hasQ&&!hasM) continue; // lewati baris kosong berformat
+                        bool hasX=row.ContainsKey("X")&&row["X"]!="", hasV=row.ContainsKey("V")&&row["V"]!="", hasQ=row.ContainsKey("AQ")&&row["AQ"]!="", hasM=row.ContainsKey("AO")&&row["AO"]!="";
+                        if(!hasX&&!hasV&&!hasQ&&!hasM) continue; // lewati baris kosong berformat
                         double d;
-                        if(row.ContainsKey("V")&&double.TryParse(row["V"],System.Globalization.NumberStyles.Any,System.Globalization.CultureInfo.InvariantCulture,out d)) r.gwp=d;
+                        // GWP = kolom X "after marketing support" (bukan V "gwp").
+                        // Label di dashboard tetap "GWP" - hanya sumber angkanya yang beda.
+                        if(row.ContainsKey("X")&&double.TryParse(row["X"],System.Globalization.NumberStyles.Any,System.Globalization.CultureInfo.InvariantCulture,out d)) r.gwp=d;
                         if(row.ContainsKey("AQ")&&double.TryParse(row["AQ"],System.Globalization.NumberStyles.Any,System.Globalization.CultureInfo.InvariantCulture,out d)) r.nop=d; else r.nop=1;
                         if(row.ContainsKey("AO")&&int.TryParse(row["AO"],out tmp)) r.ao=tmp;
                         if(row.ContainsKey("AP")&&int.TryParse(row["AP"],out tmp)) r.ap=tmp;
