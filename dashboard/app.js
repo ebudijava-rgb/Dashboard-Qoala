@@ -41,6 +41,34 @@ var SCOPE = {spa:"ALL", pa:"ALL", prom:"ALL"};
 var ROUTE = "summary";
 var monthMode="both";
 var TGT = {summary:{q:"",sort:"tg",tab:"all"},spa:{q:"",sort:"tg",tab:"all"},pa:{q:"",sort:"tg",tab:"all"},promotor:{q:"",sort:"tg",tab:"all"}};
+/* ---- pencarian nama (store / PA / promotor / AM) --------------------------
+   Kotak "Cari nama" berlaku untuk SELURUH halaman: kartu KPI, tren bulanan/harian,
+   blok peringkat & kontribusi, sampai tabel Target vs Achievement.
+   Haystack per-store dibangun sekali setiap kata kunci berubah supaya passFact
+   (dipanggil 148 ribu kali per render) tetap cepat. */
+var SEARCH_Q="", SEARCH_HAY=null, SEARCH_READY=false, searchTimer=null;
+function searchPrep(){
+  var q=norm((TGT[ROUTE]&&TGT[ROUTE].q)||"");
+  if(SEARCH_READY && q===SEARCH_Q) return;
+  SEARCH_Q=q; SEARCH_HAY=null; SEARCH_READY=true;
+  if(!q) return;
+  var a=[], facts=DATA.facts;
+  for(var k=0;k<facts.length;k++){
+    var f=facts[k], si=f[4];
+    if(si==null||si<0||a[si]) continue;
+    a[si]=norm(clean(DATA.store[si])+" "+clean(DATA.pa[f[8]])+" "+clean(DATA.prom[f[9]])+" "+clean(DATA.am[f[6]]));
+  }
+  SEARCH_HAY=a;
+}
+function searchHitStore(si){
+  if(!SEARCH_Q) return true;
+  var h=SEARCH_HAY?SEARCH_HAY[si]:null;
+  return !!h && h.indexOf(SEARCH_Q)>=0;
+}
+function searchHitText(str){
+  if(!SEARCH_Q) return true;
+  return norm(str||"").indexOf(SEARCH_Q)>=0;
+}
 
 var PAGES = {
   summary:{title:"Summary", scope:null},
@@ -69,6 +97,7 @@ function scopeVal(){
 function passFact(f, ignoreYearMonth){
   var ym=DATA.months[f[0]];
   if(LOCK && String(f[LOCK.field])!==String(LOCK.idx)) return false;
+  if(SEARCH_Q && !searchHitStore(f[4])) return false;
   if(!ignoreYearMonth){
     if(!fHit(F.year,ym.slice(0,4))) return false;
     if(!fHit(F.month,ym.slice(5,7))) return false;
@@ -89,6 +118,7 @@ function passFact(f, ignoreYearMonth){
 }
 
 function aggregate(){
+  searchPrep();
   var nM=DATA.months.length;
   var mNop=new Array(nM).fill(0), mGwp=new Array(nM).fill(0);
   var byYear={}, byProd={}, byStore={}, byPart={}, byStatus={}, byIns={};
@@ -667,7 +697,7 @@ function render(agg){
   var actF=fVals.filter(function(v){return v&&v.length;}).length;
   var nVal=fVals.reduce(function(s,v){return s+(v?v.length:0);},0);
   if(scopeVal()!=="ALL") actF++;
-  $("filterCount").textContent=(actF?(actF+" filter aktif"+(nVal>actF?" ("+nVal+" pilihan)":"")):"Tanpa filter")+" · "+fmtInt(agg.totN)+" polis";
+  $("filterCount").textContent=((actF?(actF+" filter aktif"+(nVal>actF?" ("+nVal+" pilihan)":"")):"Tanpa filter")+(SEARCH_Q?(' · cari "'+SEARCH_Q+'"'):""))+" · "+fmtInt(agg.totN)+" polis";
   var sc=scopeLabel();
   $("periodSub").innerHTML=esc((labels.length?("Periode tampil: "+labels[0]+" → "+labels[labels.length-1]):"Periode kosong")+(sc?" · "+sc:""))+'<span class="hide-sm">'+esc(" · Sumber: Data-raw.xlsx ("+fmtInt(DATA.facts.length)+" baris)")+'</span>';
   $("metaLine").textContent="Dibuat "+(DATA.meta&&DATA.meta.generated?DATA.meta.generated:"")+" · NoP=SUM(NoP) · GWP=SUM(gwp) · Target: "+((DATA.targetMeta&&DATA.targetMeta.source)||"Target.xlsx")+" ("+((DATA.target&&DATA.target.length)||0)+" store, bulan "+((DATA.targetMeta&&DATA.targetMeta.month)||"—")+" s/d tgl "+elapsedOf()+")";
@@ -752,6 +782,7 @@ function selNormArr(list, arr){
 function inSel(a,name){ return a===null||a.indexOf(name)>=0; }
 function targetFilterRows(){
   if(!DATA.target) return [];
+  searchPrep();
   var selStore=selNormArr(DATA.store,F.store), selPart=selNormArr(DATA.partner,F.part), selSpa=selNormArr(DATA.spa,F.spa);
   var selPa=selNormArr(DATA.pa,F.pa), selProm=selNormArr(DATA.prom,F.prom), selAm=selNormArr(DATA.am,F.am);
   var scSpa=ROUTE==="spa"?selNorm(DATA.spa,SCOPE.spa):null;
@@ -759,6 +790,7 @@ function targetFilterRows(){
   var scProm=ROUTE==="promotor"?selNorm(DATA.prom,SCOPE.prom):null;
   return DATA.target.filter(function(t){
     if(LOCK&&norm(t[LOCK.key]||"")!==norm(DATA[LOCK.list][LOCK.idx])) return false;
+    if(SEARCH_Q&&!searchHitText(t.s+" "+(t.pa||"")+" "+(t.pr||"")+" "+(t.am||""))) return false;
     if(!inSel(selStore,norm(t.s))) return false;
     if(!inSel(selPart,norm(t.p||""))) return false;
     if(!inSel(selAm,norm(t.am||""))) return false;
@@ -786,6 +818,7 @@ function targetRowData(){
      blok Top AM/PA/Promotor selalu menghasilkan angka yang sama — termasuk untuk polis yang
      kolom AM/SPA/PA/Promotor-nya kosong di Data-raw. */
   function keep(f){
+    if(SEARCH_Q && !searchHitStore(f[4])) return false;
     if(!fHit(F.prod,f[3])) return false;
     if(!fHit(F.ins,f[1])) return false;
     if(!fHit(F.status,f[5])) return false;
@@ -794,18 +827,21 @@ function targetRowData(){
     return true;
   }
   /* prev = aktual bulan sebelumnya (bulan tepat sebelum bulan target), filter sama
-     persis dengan aktual bulan berjalan supaya growth apple-to-apple. */
-  var act={}, prev={}, facts=DATA.facts, pIdx=octIdx>0?octIdx-1:-1;
+     persis dengan aktual bulan berjalan supaya growth apple-to-apple.
+     yoy  = aktual bulan yang sama TAHUN LALU (untuk kartu YoY). */
+  var yoyIdx=DATA.months.indexOf(String(+tm.month.slice(0,4)-1)+tm.month.slice(4));
+  var act={}, prev={}, yoy={}, facts=DATA.facts, pIdx=octIdx>0?octIdx-1:-1;
   for(var k=0;k<facts.length;k++){
     var f=facts[k];
-    if(f[0]!==octIdx&&f[0]!==pIdx) continue;
+    if(f[0]!==octIdx&&f[0]!==pIdx&&f[0]!==yoyIdx) continue;
     if(!keep(f)) continue;
     var sn=norm(clean(DATA.store[f[4]]));
-    var box=(f[0]===octIdx)?act:prev;
+    var box=(f[0]===octIdx)?act:(f[0]===pIdx?prev:yoy);
     if(!box[sn]) box[sn]={n:0,g:0};
     box[sn].n+=f[11]; box[sn].g+=f[10];
   }
   return {octIdx:octIdx,dim:dim,elapsed:elapsed,fac:dim/elapsed,act:act,prev:prev,prevYm:(pIdx>=0?DATA.months[pIdx]:null),
+          yoy:yoy,yoyYm:(yoyIdx>=0?DATA.months[yoyIdx]:null),
           rows:targetFilterRows(),extraActive:(!fAll(F.prod)||!fAll(F.ins)||!fAll(F.status))};
 }
 /* ---- growth: estimasi EOM bulan berjalan vs realisasi bulan sebelumnya ---- */
@@ -836,16 +872,18 @@ function renderTarget(){
   var act=(rd&&rd.act)||{};
   var prev=(rd&&rd.prev)||{};
   var extraActive=(rd&&rd.extraActive)||false;
+  var yoy=(rd&&rd.yoy)||{};
   var rows=(rd?rd.rows:targetFilterRows()).map(function(t){
     var a=act[norm(t.s)]||{n:0,g:0};
     var p0=prev[norm(t.s)]||{n:0,g:0};
+    var y0=yoy[norm(t.s)]||{n:0,g:0};
     var hasT=(t.tg||0)>0||(t.tn||0)>0;
     var achN=t.tn>0?a.n/t.tn:NaN, achG=t.tg>0?a.g/t.tg:NaN;
     var eN=a.n*fac, eG=a.g*fac;
     var estA=(t.tg>0)?eG/t.tg:(t.tn>0?eN/t.tn:NaN);
     var gN=(p0.n>0)?(eN-p0.n)/p0.n:NaN, gG=(p0.g>0)?(eG-p0.g)/p0.g:NaN;
     return {s:t.s,pa:t.pa||"—",pr:t.pr||"—",tn:t.tn||0,tg:t.tg||0,an:a.n,ag:a.g,achN:achN,achG:achG,eN:eN,eG:eG,estA:estA,
-            gN:gN,gG:gG,pn:p0.n,pg:p0.g,st:tgtStatus(estA,hasT)};
+            gN:gN,gG:gG,pn:p0.n,pg:p0.g,yn:y0.n,yg:y0.g,st:tgtStatus(estA,hasT)};
   });
   var fr=rows.filter(function(r){
     if(st.tab==="done") return r.st.t==="Tercapai";
@@ -854,18 +892,27 @@ function renderTarget(){
   });
   var q=norm(st.q);
   if(q) fr=fr.filter(function(r){ return norm(r.s+" "+r.pa+" "+r.pr).indexOf(q)>=0; });
-  var tN=0,tG=0,aN=0,aG=0;
-  rows.forEach(function(r){ tN+=r.tn; tG+=r.tg; aN+=r.an; aG+=r.ag; });
+  var tN=0,tG=0,aN=0,aG=0,pN=0,pG=0,yN=0,yG=0;
+  rows.forEach(function(r){ tN+=r.tn; tG+=r.tg; aN+=r.an; aG+=r.ag; pN+=r.pn; pG+=r.pg; yN+=r.yn; yG+=r.yg; });
   var achN=tN>0?aN/tN:NaN, achG=tG>0?aG/tG:NaN, eNt=aN*fac, eGt=aG*fac;
   var estAN=tN>0?eNt/tN:NaN, estAG=tG>0?eGt/tG:NaN;
+  /* MoM = est EOM bulan berjalan vs realisasi bulan sebelumnya
+     YoY = est EOM bulan berjalan vs realisasi bulan yang sama tahun lalu
+     (mengikuti store yang tampil = filter + pencarian nama) */
+  var momN=pN>0?(eNt-pN)/pN:NaN, momG=pG>0?(eGt-pG)/pG:NaN;
+  var yoyN=yN>0?(eNt-yN)/yN:NaN, yoyG=yG>0?(eGt-yG)/yG:NaN;
+  function dcls(v){ return !isFinite(v)?"flat":(v>0.0005?"up":(v<-0.0005?"down":"flat")); }
+  var pmLbl2=(rd&&rd.prevYm)?ymLabel(rd.prevYm):"—", yyLbl2=(rd&&rd.yoyYm)?ymLabel(rd.yoyYm):"—";
   $("tgtKpis").innerHTML=
     '<div class="kpi"><div class="t">Ach NoP (tgl '+elapsed+')</div><div class="v">'+(isFinite(achN)?(achN*100).toLocaleString("id-ID",{maximumFractionDigits:1})+"%":"—")+'</div><div class="d flat">'+fmtInt(aN)+' / '+fmtInt(tN)+'</div></div>'+
     '<div class="kpi"><div class="t">Ach GWP (tgl '+elapsed+')</div><div class="v">'+(isFinite(achG)?(achG*100).toLocaleString("id-ID",{maximumFractionDigits:1})+"%":"—")+'</div><div class="d flat">'+fmtIDR(aG)+' / '+fmtIDR(tG)+'</div></div>'+
     '<div class="kpi"><div class="t">Est Ach NoP (EOM)</div><div class="v">'+(isFinite(estAN)?(estAN*100).toLocaleString("id-ID",{maximumFractionDigits:1})+"%":"—")+'</div><div class="d flat">est '+fmtInt(eNt)+'</div></div>'+
-    '<div class="kpi"><div class="t">Est Ach GWP (EOM)</div><div class="v">'+(isFinite(estAG)?(estAG*100).toLocaleString("id-ID",{maximumFractionDigits:1})+"%":"—")+'</div><div class="d flat">est '+fmtIDR(eGt)+'</div></div>';
+    '<div class="kpi"><div class="t">Est Ach GWP (EOM)</div><div class="v">'+(isFinite(estAG)?(estAG*100).toLocaleString("id-ID",{maximumFractionDigits:1})+"%":"—")+'</div><div class="d flat">est '+fmtIDR(eGt)+'</div></div>'+
+    '<div class="kpi"><div class="t">MoM NoP &middot; <span class="muted-sm">vs '+pmLbl2+'</span></div><div class="v '+dcls(momN)+'">'+fmtPct(momN)+'</div><div class="d '+dcls(momG)+'">GWP '+fmtPct(momG)+'</div></div>'+
+    '<div class="kpi"><div class="t">YoY NoP &middot; <span class="muted-sm">vs '+yyLbl2+'</span></div><div class="v '+dcls(yoyN)+'">'+fmtPct(yoyN)+'</div><div class="d '+dcls(yoyG)+'">GWP '+fmtPct(yoyG)+'</div></div>';
   var pace=elapsed/dim;
   var yLbl=ymLabel(tm.month);
-  $("tgtNote").textContent="Periode dikunci "+yLbl+" · data per tgl "+elapsed+" "+yLbl.split(" ")[0]+" (pace linear "+(pace*100).toLocaleString("id-ID",{maximumFractionDigits:1})+"%) · estimasi EOM = aktual ×"+(dim/elapsed).toLocaleString("id-ID",{maximumFractionDigits:2})+" · baris store mengikuti filter AM/SPA/PA/Promotor/Store/Partner dari Target.xlsx"+(extraActive?" · aktual juga difilter Produk/Insurance/Status (target tetap level store)":"")+" · growth = est EOM vs realisasi "+(rd&&rd.prevYm?ymLabel(rd.prevYm):"bulan sebelumnya")+" · "+rows.length+" store tampil.";
+  $("tgtNote").textContent="Periode dikunci "+yLbl+" · data per tgl "+elapsed+" "+yLbl.split(" ")[0]+" (pace linear "+(pace*100).toLocaleString("id-ID",{maximumFractionDigits:1})+"%) · estimasi EOM = aktual ×"+(dim/elapsed).toLocaleString("id-ID",{maximumFractionDigits:2})+" · baris & kartu mengikuti filter AM/SPA/PA/Promotor/Store/Partner dari Target.xlsx"+(extraActive?" · aktual juga difilter Produk/Insurance/Status (target tetap level store)":"")+" · MoM = est EOM vs realisasi "+(rd&&rd.prevYm?ymLabel(rd.prevYm):"bulan sebelumnya")+" · YoY = est EOM vs realisasi "+(rd&&rd.yoyYm?ymLabel(rd.yoyYm):"bulan sama tahun lalu")+(SEARCH_Q?(" · pencarian \""+SEARCH_Q+"\""):"")+" · "+rows.length+" store tampil.";
   fr.sort(function(a,b){
     if(st.sort==="achLo") return (isFinite(a.achG)?a.achG:-1)-(isFinite(b.achG)?b.achG:-1);
     if(st.sort==="achHi") return (isFinite(b.achG)?b.achG:-1)-(isFinite(a.achG)?a.achG:-1);
@@ -918,7 +965,7 @@ function pageHTML(){
   h+='<section class="card" id="tgtSec"><div class="card-h row"><div><h2>Target vs Achievement — '+tmLbl+' <span class="muted-sm">data per tgl '+(el0||"—")+'</span></h2><p class="muted" id="tgtNote"></p></div>'+
      '<div class="tabs" id="tgtTabs"><button data-t="all" class="on">Semua</button><button data-t="behind">Belum 100%</button><button data-t="done">Tercapai</button></div></div>'+
      '<div class="kpis" id="tgtKpis" style="margin-top:12px"></div>'+
-     '<div class="tgt-controls"><input id="tgtSearch" type="search" placeholder="Cari store / PA / promotor…"><select id="tgtSort"><option value="tg">Urut: Target GWP terbesar</option><option value="achLo">Urut: Achievement GWP terendah</option><option value="achHi">Urut: Achievement GWP tertinggi</option><option value="gap">Urut: Selisih GWP terbesar</option></select></div>'+
+     '<div class="tgt-controls"><input id="tgtSearch" type="search" placeholder="Cari store / PA / promotor…"><span class="muted-sm hide-sm">pencarian berlaku ke seluruh halaman (kartu KPI, tren, blok, tabel)</span><select id="tgtSort"><option value="tg">Urut: Target GWP terbesar</option><option value="achLo">Urut: Achievement GWP terendah</option><option value="achHi">Urut: Achievement GWP tertinggi</option><option value="gap">Urut: Selisih GWP terbesar</option></select></div>'+
      '<div class="tbl-wrap tgt-wrap"><table id="tgtTable" class="tgt"><thead><tr><th class="sticky">Store</th><th>PA</th><th>Promotor</th><th>Tgt NoP</th><th>Akt NoP</th><th>Ach NoP</th><th>Tgt GWP</th><th>Akt GWP</th><th>Ach GWP</th><th>Est NoP</th><th>Est GWP</th><th>Est Ach</th><th class="gcol" title="Growth = estimasi akhir bulan (EOM) bulan berjalan vs realisasi '+pmLbl+'">Growth vs '+pmLbl+'</th><th>Status</th></tr></thead><tbody></tbody></table></div></section>';
   if(grid1) h+='<div class="cols2">'+grid1+'</div>';
   if(rest) h+=rest;
@@ -955,7 +1002,16 @@ function bindPage(){
     render(aggregate());
   });
   var st=TGT[ROUTE], ts=$("tgtSearch"), so=$("tgtSort"), tt=$("tgtTabs");
-  if(ts){ ts.value=st.q; ts.addEventListener("input",function(e){ st.q=e.target.value; renderTarget(); }); }
+  if(ts){
+    ts.value=st.q;
+    function goSearch(){ if(searchTimer){ clearTimeout(searchTimer); searchTimer=null; } searchPrep(); render(aggregate()); }
+    ts.addEventListener("input",function(e){
+      st.q=e.target.value;
+      if(searchTimer) clearTimeout(searchTimer);
+      searchTimer=setTimeout(goSearch,250);   /* tunggu user selesai mengetik */
+    });
+    ts.addEventListener("keydown",function(e){ if(e.key==="Enter"){ e.preventDefault(); goSearch(); } });
+  }
   if(so){ so.value=st.sort; so.addEventListener("change",function(e){ st.sort=e.target.value; renderTarget(); }); }
   if(tt) tt.querySelectorAll("button").forEach(function(b){
     if(b.dataset.t===st.tab){ tt.querySelectorAll("button").forEach(function(x){x.classList.remove("on");}); b.classList.add("on"); }
