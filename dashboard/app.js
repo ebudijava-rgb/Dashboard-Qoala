@@ -54,7 +54,8 @@ var BREAKS = {
        {id:"B4",t:"Kontribusi by produk <span class='muted-sm'>(12/18/24 bulan)</span>",map:"byProd",c:1,half:1},
        {id:"B5",t:"Kontribusi by durasi polis <span class='muted-sm'>(6/12/18/24/36 bulan)</span>",map:"byDurM",c:1,half:1,m:1},
        {id:"B6",t:"Kontribusi by brand <span class='muted-sm'>(Apple, Samsung, dll)</span>",map:"byBrandM",c:1,half:1,m:1},
-       {id:"B7",t:"Kontribusi by kategori perangkat <span class='muted-sm'>(smartphone, watch, dll)</span>",map:"byCatM",c:1,half:1,m:1}],
+       {id:"B7",t:"Kontribusi by kategori perangkat <span class='muted-sm'>(smartphone, watch, dll)</span>",map:"byCatM",c:1,half:1,m:1},
+       {id:"B8",t:"Kontribusi by brand <span class='muted-sm'>(Digimap &amp; Digiplus)</span>",sc:1,partners:["Digimap","Digiplus"]}],
   pa:[{id:"B1",t:"Top produk",map:"byProd"},{id:"B2",t:"Top store",map:"byStore"},{id:"B3",t:"Top Promotor",map:"byProm"}],
   promotor:[{id:"B1",t:"Top produk",map:"byProd"},{id:"B2",t:"Top store",map:"byStore"}]
 };
@@ -317,6 +318,67 @@ function contribList(elId, entries, baseG, baseN, note){
          '<span class="v2">'+fmtInt(e.n)+' polis ('+shN.toLocaleString("id-ID",{maximumFractionDigits:1})+'%) · '+fmtIDR(e.g)+'</span>'+
        '</div>';
   });
+  el.innerHTML=h;
+}
+
+/* Scorecard kontribusi per partner (Digimap & Digiplus):
+   NoP, GWP, ASP, MoM, YoY, share kontribusi.
+   - NoP/GWP/ASP = aktual bulan berjalan (sudah ikut semua filter aktif)
+   - MoM & YoY    = estimasi EOM bulan berjalan vs AKTUAL bulan kalender sebelumnya
+                    / bulan yang sama tahun lalu (sama seperti kartu KPI), jadi tetap
+                    tampil walaupun bulan pembanding tidak ikut filter Tahun/Bulan
+   - Share        = porsi terhadap total bulan berjalan pada filter aktif */
+function renderPartnerScore(b, agg){
+  var el=$(b.id), sub=$(b.id+"sub");
+  if(!el) return;
+  var cmp=agg.cmp;
+  if(!cmp){ el.innerHTML='<p class="muted">Tidak ada data pada filter ini.</p>'; return; }
+  if(sub) sub.textContent=ymLabel(cmp.ym);
+  var want=(b.partners||["Digimap","Digiplus"]), pool=DATA.partner||[];
+  var rows=[], i, k;
+  for(i=0;i<want.length;i++){
+    var low=norm(want[i]), nm=want[i];
+    for(k=0;k<pool.length;k++){ if(norm(pool[k])===low) nm=clean(pool[k]); }
+    var m={}; m[cmp.ym]={n:0,g:0}; m[cmp.momYm]={n:0,g:0}; m[cmp.yoyYm]={n:0,g:0};
+    rows.push({low:low,nm:nm,m:m});
+  }
+  var facts=DATA.facts;
+  for(k=0;k<facts.length;k++){
+    var f=facts[k], lp=norm(DATA.partner[f[2]]), slot=null;
+    for(i=0;i<rows.length;i++){ if(rows[i].low===lp){ slot=rows[i].m[DATA.months[f[0]]]; break; } }
+    if(!slot) continue;
+    if(!passFact(f,true)) continue; /* abaikan filter Tahun/Bulan */
+    slot.n+=f[11]; slot.g+=f[10];
+  }
+  var mi=(agg.miF>=0?agg.miF:DATA.months.indexOf(cmp.ym));
+  var totN=agg.mNop[mi]||0, totG=agg.mGwp[mi]||0;
+  function pc(a,bs){ return bs>0?((a-bs)/bs):NaN; }
+  function sh(v,tot){ return tot>0?(v/tot*100).toLocaleString("id-ID",{maximumFractionDigits:1})+"%":"—"; }
+  function line(lbl,html){ return '<div class="gl"><span class="g-lbl">'+lbl+'</span>'+html+'</div>'; }
+  var h='<p class="muted contrib-note">Bulan berjalan <b>'+ymLabel(cmp.ym)+'</b> · NoP/GWP/ASP = aktual s/d tgl '+cmp.elapsed+
+        ' · <b>MoM</b> vs '+ymLabel(cmp.momYm)+' &amp; <b>YoY</b> vs '+ymLabel(cmp.yoyYm)+
+        ' pakai estimasi EOM bulan berjalan (aktual ×'+cmp.fac.toLocaleString("id-ID",{maximumFractionDigits:2})+
+        '), bulan pembanding tetap aktual penuh · share = porsi dari total bulan berjalan pada filter aktif'+
+        ' · Digimap &amp; Digiplus adalah nilai kolom <b>Partner</b>. Tiap sel MoM/YoY/share: baris atas GWP, bawah NoP.</p>';
+  h+='<div class="tbl-wrap"><table class="sc"><thead><tr><th>Brand</th><th>NoP</th><th>GWP</th><th>ASP</th><th>MoM</th><th>YoY</th><th>Share kontribusi</th></tr></thead><tbody>';
+  rows.forEach(function(r){
+    var cur=r.m[cmp.ym], mom=r.m[cmp.momYm], yoy=r.m[cmp.yoyYm];
+    if(!cur.n&&!cur.g){
+      h+='<tr><th scope="row" title="'+esc(r.nm)+'">'+esc(r.nm)+'</th><td>0</td><td>—</td><td>—</td>'+
+         '<td class="g-flat">—</td><td class="g-flat">—</td><td class="g-flat">—</td></tr>';
+      return;
+    }
+    var estN=cur.n*cmp.fac, estG=cur.g*cmp.fac;
+    h+='<tr><th scope="row" title="'+esc(r.nm)+'">'+esc(r.nm)+'</th>'+
+       '<td>'+fmtInt(cur.n)+'</td>'+
+       '<td>'+fmtIDR(cur.g)+'</td>'+
+       '<td>'+(cur.n?fmtIDR(cur.g/cur.n):"—")+'</td>'+
+       '<td>'+line("GWP",growthSpan(pc(estG,mom.g),mom.g>0))+line("NoP",growthSpan(pc(estN,mom.n),mom.n>0))+'</td>'+
+       '<td>'+line("GWP",growthSpan(pc(estG,yoy.g),yoy.g>0))+line("NoP",growthSpan(pc(estN,yoy.n),yoy.n>0))+'</td>'+
+       '<td>'+line("GWP",'<span class="sh-v">'+sh(cur.g,totG)+'</span>')+line("NoP",'<span class="sh-v">'+sh(cur.n,totN)+'</span>')+'</td>'+
+       '</tr>';
+  });
+  h+='</tbody></table></div>';
   el.innerHTML=h;
 }
 
@@ -583,6 +645,7 @@ function render(agg){
   }
   (BREAKS[ROUTE]||[]).forEach(function(b){
     if(b.map==="byAm"||b.map==="byPa"||b.map==="byProm") renderAchBreak(b);
+    else if(b.sc) renderPartnerScore(b,agg);
     else{
       var src=(b.map==="byProd")?agg.byProdM:(b.map==="byStore"?agg.byStoreM:agg[b.map]);
       var sub=$(b.id+"sub"); if(sub) sub.textContent=(agg.miF>=0?ymLabel(DATA.months[agg.miF]):"—");

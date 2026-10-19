@@ -122,6 +122,16 @@ table.tgt thead th.sticky{z-index:3;background:var(--navy);color:#fff}
 .gcell .g-down{color:#be123c;font-weight:800}
 .gcell .g-flat{color:var(--muted);font-weight:700}
 th.gcol{white-space:nowrap}
+/* scorecard kontribusi per partner (Digimap & Digiplus) */
+table.sc{font-size:12.5px;min-width:690px}
+table.sc th,table.sc td{white-space:nowrap;padding:9px 12px}
+table.sc tbody th{font-weight:800;color:var(--ink)}
+.sc .gl{display:flex;justify-content:flex-end;align-items:baseline;gap:6px;line-height:1.45}
+.sc .g-lbl{font-size:9px;font-weight:800;color:var(--muted);letter-spacing:.04em;text-transform:uppercase}
+.sc .g-up{color:#15803d;font-weight:800}
+.sc .g-down{color:#be123c;font-weight:800}
+.sc .g-flat{color:var(--muted);font-weight:700}
+.sc .sh-v{font-weight:800;font-variant-numeric:tabular-nums}
 .pill{display:inline-block;padding:3px 10px;border-radius:999px;font-size:11px;font-weight:800;white-space:nowrap}
 .p-green{background:#dcfce7;color:#15803d}.p-amber{background:#fef9c3;color:#a16207}.p-orange{background:#ffedd5;color:#c2410c}.p-red{background:#ffe4e6;color:#be123c}.p-gray{background:#f4f0e8;color:#78716c}
 /* sidebar layout */
