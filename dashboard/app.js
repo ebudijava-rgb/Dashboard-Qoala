@@ -49,14 +49,14 @@ var PAGES = {
   promotor:{title:"Promotor", scope:"prom", list:"prom", label:"Pilih Promotor"}
 };
 var BREAKS = {
-  summary:[{id:"B1",t:"Top produk",map:"byProd"},{id:"B2",t:"Top store",map:"byStore"},{id:"B3",t:"Top PA",map:"byPa"}],
-  spa:[{id:"B1",t:"Top area_manager",map:"byAm"},{id:"B2",t:"Top PA",map:"byPa"},{id:"B3",t:"Top Promotor",map:"byProm"},
-       {id:"B4",t:"Kontribusi by produk <span class='muted-sm'>(12/18/24 bulan)</span>",map:"byProd",c:1,half:1},
-       {id:"B5",t:"Kontribusi by durasi polis <span class='muted-sm'>(6/12/18/24/36 bulan)</span>",map:"byDurM",c:1,half:1,m:1},
-       {id:"B6",t:"Kontribusi by brand <span class='muted-sm'>(Apple, Samsung, dll)</span>",map:"byBrandM",c:1,half:1,m:1},
-       {id:"B7",t:"Kontribusi by kategori perangkat <span class='muted-sm'>(smartphone, watch, dll)</span>",map:"byCatM",c:1,half:1,m:1},
-       {id:"B8",t:"Kontribusi by brand <span class='muted-sm'>(Digimap &amp; Digiplus)</span>",sc:1,partners:["Digimap","Digiplus"]}],
-  pa:[{id:"B1",t:"Top produk",map:"byProd"},{id:"B2",t:"Top store",map:"byStore"},{id:"B3",t:"Top Promotor",map:"byProm"}],
+  summary:[{id:"B1",t:"Top produk",map:"byProd"},{id:"B2",t:"Top store",map:"byStore"},{id:"B3",t:"Rank By Partnership Associate",map:"byPa"}],
+  spa:[{id:"B1",t:"Rank By Area Manager",map:"byAm"},{id:"B2",t:"Rank By Partnership Associate",map:"byPa"},{id:"B3",t:"Rank By Promoters",map:"byProm"},
+       {id:"B4",t:"Contribution By Product",map:"byProd",c:1,half:1},
+       {id:"B5",t:"Contribution By Tenor",map:"byDurM",c:1,half:1,m:1},
+       {id:"B6",t:"Contribution By Brand <span class='muted-sm'>(Apple, Samsung, etc.)</span>",map:"byBrandM",c:1,half:1,m:1},
+       {id:"B7",t:"Contribution By Category <span class='muted-sm'>(smartphone, watch, etc.)</span>",map:"byCatM",c:1,half:1,m:1},
+       {id:"B8",t:"Contribution By Business Unit <span class='muted-sm'>(Digimap &amp; Digiplus)</span>",sc:1,partners:["Digimap","Digiplus"]}],
+  pa:[{id:"B1",t:"Top produk",map:"byProd"},{id:"B2",t:"Top store",map:"byStore"},{id:"B3",t:"Rank By Promoters",map:"byProm"}],
   promotor:[{id:"B1",t:"Top produk",map:"byProd"},{id:"B2",t:"Top store",map:"byStore"}]
 };
 
