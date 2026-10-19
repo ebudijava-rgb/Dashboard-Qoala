@@ -892,7 +892,7 @@ function startDashboard(){
   });
   $("burger").addEventListener("click",function(){ document.body.classList.toggle("nav-open"); });
   $("scrim").addEventListener("click",function(){ document.body.classList.remove("nav-open"); });
-  document.querySelectorAll(".side-nav a").forEach(function(a){
+  document.querySelectorAll("#side a").forEach(function(a){
     a.addEventListener("click",function(){ document.body.classList.remove("nav-open"); });
   });
   window.addEventListener("hashchange",function(){
