@@ -27,8 +27,15 @@ function ReadText($p) {
   $t = $sr.ReadToEnd(); $sr.Close(); return $t
 }
 function GitRun([string[]]$gitArgs) {
-  $out = & $script:git -C $script:root @gitArgs 2>&1
-  $code = $LASTEXITCODE; if ($null -eq $code) { $code = 0 }
+  # git menulis progres ke stderr; kalau $ErrorActionPreference=Stop ini bikin skrip mati.
+  $prev = $ErrorActionPreference
+  $ErrorActionPreference = "Continue"
+  try {
+    $out = & $script:git -C $script:root @gitArgs 2>&1
+    $code = $LASTEXITCODE; if ($null -eq $code) { $code = 0 }
+  } finally {
+    $ErrorActionPreference = $prev
+  }
   return @{ code = $code; out = (($out | Out-String).Trim()) }
 }
 
