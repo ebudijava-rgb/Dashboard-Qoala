@@ -74,7 +74,9 @@ var PAGES = {
   summary:{title:"Summary", scope:null},
   spa:{title:"SPA", scope:"spa", list:"spa", label:"Pilih SPA"},
   pa:{title:"PA", scope:"pa", list:"pa", label:"Pilih PA"},
-  promotor:{title:"Promotor", scope:"prom", list:"prom", label:"Pilih Promotor"}
+  promotor:{title:"Promotor", scope:"prom", list:"prom", label:"Pilih Promotor"},
+  account:{title:"Account", scope:null, eyebrow:"SETTING · ACCOUNT", admin:1},
+  keamanan:{title:"Keamanan", scope:null, eyebrow:"SETTING · KEAMANAN", admin:1}
 };
 var BREAKS = {
   summary:[{id:"B1",t:"Top produk",map:"byProd"},{id:"B2",t:"Top store",map:"byStore"},{id:"B3",t:"Rank By Partnership Associate",map:"byPa"}],
@@ -941,8 +943,210 @@ function renderTarget(){
   tb.innerHTML=html;
 }
 
+/* ================= SETTING (khusus Administrator) =================
+   Halaman Account (info akun + ubah kata sandi) dan Keamanan (riwayat akses).
+   Dashboard ini statis (tanpa server), jadi:
+   - kata sandi baru disimpan sebagai hash di localStorage browser ini, dan bisa
+     diterapkan permanen lewat patch + tools/apply-password.ps1 lalu refresh data;
+   - riwayat akses dicatat di localStorage perangkat ini. */
+var SESS_KEY="qoala.sessions", SESS_CUR="qoala.sessid", PW_KEY="qoala.pw";
+var pendingPatch=[];
+
+function lsGet(k,d){
+  try{ var v=localStorage.getItem(k); return v?JSON.parse(v):d; }catch(e){ return d; }
+}
+function lsSet(k,v){ try{ localStorage.setItem(k,JSON.stringify(v)); }catch(e){} }
+function dlFile(name,text,mime){
+  var b=new Blob([text],{type:mime||"text/plain;charset=utf-8"});
+  var a=document.createElement("a");
+  a.href=URL.createObjectURL(b); a.download=name; a.click();
+  setTimeout(function(){ URL.revokeObjectURL(a.href); },2000);
+}
+function deviceLabel(){
+  var ua=navigator.userAgent||"";
+  var os=/Windows/i.test(ua)?"Windows":/Android/i.test(ua)?"Android":/iPhone|iPad|iPod/i.test(ua)?"iOS":/Mac OS X/i.test(ua)?"macOS":/Linux/i.test(ua)?"Linux":"Lainnya";
+  var br=/Edg\//i.test(ua)?"Edge":/OPR\//i.test(ua)?"Opera":/Chrome\//i.test(ua)?"Chrome":/Firefox\//i.test(ua)?"Firefox":/Safari\//i.test(ua)?"Safari":"Browser";
+  return os+" · "+br;
+}
+function sessList(){ var a=lsGet(SESS_KEY,[]); return Array.isArray(a)?a:[]; }
+function sessCurrentId(){ try{ return sessionStorage.getItem(SESS_CUR); }catch(e){ return null; } }
+function sessStart(u){
+  var arr=sessList();
+  var id="s"+Date.now().toString(36)+"-"+Math.random().toString(36).slice(2,7);
+  arr.push({id:id,u:u.u,n:u.n||u.u,r:u.r||"",t0:Date.now(),t1:Date.now(),dev:deviceLabel()});
+  if(arr.length>300) arr=arr.slice(arr.length-300);
+  lsSet(SESS_KEY,arr);
+  try{ sessionStorage.setItem(SESS_CUR,id); }catch(e){}
+  return id;
+}
+function sessTouch(){
+  var id=sessCurrentId(); if(!id) return;
+  var arr=sessList(), hit=false;
+  for(var i=0;i<arr.length;i++){ if(arr[i].id===id){ arr[i].t1=Date.now(); hit=true; } }
+  if(hit) lsSet(SESS_KEY,arr);
+}
+function fmtDur(ms){
+  if(!isFinite(ms)||ms<0) return "—";
+  var s=Math.floor(ms/1000), m=Math.floor(s/60), h=Math.floor(m/60);
+  if(h>0) return h+" j "+String(m%60).padStart(2,"0")+" m";
+  if(m>0) return m+" m "+String(s%60).padStart(2,"0")+" d";
+  return "<1 m";
+}
+function fmtTime(ts){
+  if(!ts) return "—";
+  var d=new Date(ts);
+  var mo=["Jan","Feb","Mar","Apr","Mei","Jun","Jul","Agu","Sep","Okt","Nov","Des"][d.getMonth()];
+  return d.getDate()+" "+mo+" "+d.getFullYear()+" "+String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0");
+}
+/* --- kata sandi: hash efektif (patch lokal menimpa hash dari Master_user) --- */
+function effHash(u){ if(!u) return ""; var m=lsGet(PW_KEY,{})||{}; return m[u.u]||u.h; }
+function setLocalPw(u,plain){
+  var m=lsGet(PW_KEY,{})||{};
+  m[u.u]=hashPw(plain);
+  lsSet(PW_KEY,m);
+  u.h=m[u.u];
+}
+/* --- halaman Account --- */
+function accountHTML(){
+  return '<section class="card"><div class="card-h row"><div><h2>Account</h2><p class="muted">Informasi akun dan penggantian kata sandi.</p></div>'+
+    '<div class="tabs" id="accTabs"><button type="button" data-a="info" class="on">Info</button><button type="button" data-a="pw">Ubah Kata Sandi</button></div></div>'+
+    '<div id="accInfo" class="acc-pane"></div><div id="accPw" class="acc-pane" hidden></div></section>';
+}
+function renderAccountInfo(){
+  if(!USER||!$("accInfo")) return;
+  var scopeTxt = LOCK ? ((LOCK.level===1?"SPA ":"PA ")+LOCK.name) : (BLOCKED?"Tanpa akses":"Semua data (semua SPA)");
+  var cur=sessList().filter(function(s){ return s.id===sessCurrentId(); })[0]||null;
+  var m=lsGet(PW_KEY,{})||{};
+  $("accInfo").innerHTML='<div class="kv">'+
+    '<div>Nama</div><div><b>'+esc(USER.n||"—")+'</b></div>'+
+    '<div>Email</div><div>'+esc(USER.u||"—")+'</div>'+
+    '<div>Role</div><div><span class="pill ok">'+esc(USER.r||"—")+'</span></div>'+
+    '<div>Akses data</div><div>'+esc(scopeTxt)+'</div>'+
+    '<div>Kata sandi</div><div>•••••••• <span class="muted-sm">'+(m[USER.u]?"· diubah di browser ini":"· dari Master_user.xlsx")+'</span></div>'+
+    '<div>Sesi ini</div><div>'+(cur?("mulai "+fmtTime(cur.t0)+" · "+fmtDur(Date.now()-cur.t0)):"—")+'</div>'+
+    '<div>Perangkat</div><div>'+esc(deviceLabel())+'</div>'+
+  '</div>';
+}
+function renderAccountPw(){
+  var box=$("accPw"); if(!box) return;
+  box.innerHTML=
+    '<form id="pwForm" class="form-col" autocomplete="off">'+
+      '<label>Password sekarang<input id="pwCur" type="password" autocomplete="current-password" spellcheck="false"></label>'+
+      '<label>Password baru<input id="pwNew" type="password" autocomplete="new-password" spellcheck="false" placeholder="minimal 6 karakter"></label>'+
+      '<label>Konfirmasi password baru<input id="pwNew2" type="password" autocomplete="new-password" spellcheck="false"></label>'+
+      '<div class="row-btns"><button class="btn primary" type="submit">Simpan kata sandi</button>'+
+        '<button class="btn ghost" type="button" id="pwPatch" hidden>Unduh patch password</button></div>'+
+      '<div id="pwMsg" class="notice" hidden></div>'+
+      '<p class="muted">Password baru langsung berlaku di browser ini. Agar berlaku untuk semua perangkat: unduh patch, lalu jalankan <code>tools\\apply-password.ps1 -File password-patch.json</code> dan <code>tools\\refresh.bat</code>.</p>'+
+    '</form>';
+  bindPwForm();
+}
+function bindPwForm(){
+  var f=$("pwForm"); if(!f) return;
+  f.addEventListener("submit",function(ev){
+    ev.preventDefault();
+    if(!USER) return;
+    var cur=$("pwCur").value, n1=$("pwNew").value, n2=$("pwNew2").value;
+    function msg(t,ok){ var m=$("pwMsg"); if(!m) return; m.textContent=t; m.className="notice "+(ok?"ok":"err"); m.hidden=false; }
+    if(!cur) return msg("Masukkan password sekarang.",false);
+    if(effHash(USER)!==hashPw(cur)) return msg("Password sekarang salah.",false);
+    if(n1.length<6) return msg("Password baru minimal 6 karakter.",false);
+    if(n1!==n2) return msg("Konfirmasi password baru tidak sama.",false);
+    if(n1===cur) return msg("Password baru harus berbeda dari password sekarang.",false);
+    setLocalPw(USER,n1);
+    pendingPatch.push({email:USER.u,name:USER.n||USER.u,role:USER.r||"",password:n1});
+    $("pwCur").value=""; $("pwNew").value=""; $("pwNew2").value="";
+    var pb=$("pwPatch"); if(pb) pb.hidden=false;
+    msg("Kata sandi berhasil diubah dan langsung berlaku di browser ini.",true);
+    renderAccountInfo();
+  });
+  var pb=$("pwPatch");
+  if(pb) pb.addEventListener("click",function(){
+    if(!pendingPatch.length) return;
+    var payload={generated:new Date().toISOString(),
+      note:"Patch kata sandi dashboard Qoala. Jalankan: tools/apply-password.ps1 -File <file ini>",
+      items:pendingPatch};
+    dlFile("password-patch.json",JSON.stringify(payload,null,2),"application/json");
+  });
+}
+/* --- halaman Keamanan --- */
+function securityHTML(){
+  return '<section class="card"><div class="card-h"><div><h2>Sesi saat ini</h2><p class="muted">Sesi login yang sedang dipakai di perangkat ini.</p></div></div><div id="secNow"></div></section>'+
+    '<section class="card"><div class="card-h row"><div><h2>Riwayat akses web</h2><p class="muted">Akun yang pernah membuka dashboard di browser/perangkat ini.</p></div>'+
+      '<div class="row-btns"><button class="btn ghost sm" type="button" id="secCsv">Ekspor CSV</button><button class="btn ghost sm" type="button" id="secClear">Hapus riwayat</button></div></div>'+
+      '<div class="tbl-wrap"><table class="sc sec-table" id="secTable"><thead><tr><th>Akun</th><th class="hide-sm">Role</th><th>Masuk</th><th class="hide-sm">Terakhir aktif</th><th>Durasi</th><th class="hide-sm">Perangkat</th></tr></thead><tbody></tbody></table></div>'+
+      '<p class="muted">Catatan: dashboard ini statis (tanpa server), jadi riwayat hanya tercatat di browser ini dan tidak tergabung dari perangkat lain.</p></section>';
+}
+function renderSecurity(){
+  var arr=sessList().slice().sort(function(a,b){ return (b.t0||0)-(a.t0||0); });
+  var cur=sessCurrentId(), now=Date.now();
+  var c=arr.filter(function(s){ return s.id===cur; })[0]||null;
+  if($("secNow")){
+    $("secNow").innerHTML = c ? ('<div class="kv"><div>Akun</div><div><b>'+esc(c.n)+'</b> · '+esc(c.u)+'</div>'+
+      '<div>Role</div><div>'+esc(c.r||"—")+'</div>'+
+      '<div>Masuk</div><div>'+fmtTime(c.t0)+'</div>'+
+      '<div>Durasi berjalan</div><div><b id="secNowDur">'+fmtDur(now-c.t0)+'</b></div>'+
+      '<div>Perangkat</div><div>'+esc(c.dev||"—")+'</div></div>')
+      : '<p class="muted">Tidak ada sesi aktif.</p>';
+  }
+  var tb=$("secTable")?$("secTable").querySelector("tbody"):null;
+  if(tb){
+    tb.innerHTML = arr.length ? arr.map(function(s){
+      var dur=(s.t1||s.t0)-(s.t0||s.t1), active=(s.id===cur);
+      return '<tr><td>'+esc(s.n||"")+'<div class="muted-sm">'+esc(s.u||"")+'</div></td>'+
+        '<td class="hide-sm">'+esc(s.r||"—")+(active?' <span class="pill ok">aktif</span>':'')+'</td>'+
+        '<td>'+fmtTime(s.t0)+'</td><td class="hide-sm">'+fmtTime(s.t1)+'</td><td>'+fmtDur(dur)+'</td><td class="hide-sm">'+esc(s.dev||"—")+'</td></tr>';
+    }).join("") : '<tr><td colspan="6">Belum ada riwayat.</td></tr>';
+  }
+  if($("secCsv")) $("secCsv").onclick=function(){
+    var head="akun,email,role,masuk,terakhir_aktif,durasi_menit,perangkat\n";
+    var rows=arr.map(function(s){
+      var dur=((s.t1||s.t0)-(s.t0||s.t1))/60000;
+      return [s.n||"",s.u||"",s.r||"",new Date(s.t0).toISOString(),new Date(s.t1||s.t0).toISOString(),(Math.round(dur*10)/10),s.dev||""]
+        .map(function(v){ return '"'+String(v).replace(/"/g,'""')+'"'; }).join(",");
+    }).join("\n");
+    dlFile("riwayat-akses-"+new Date().toISOString().slice(0,10)+".csv",head+rows,"text/csv;charset=utf-8");
+  };
+  if($("secClear")) $("secClear").onclick=function(){
+    if(!confirm("Hapus seluruh riwayat akses di browser ini?")) return;
+    lsSet(SESS_KEY,[]);
+    try{ sessionStorage.removeItem(SESS_CUR); }catch(e){}
+    if(USER) sessStart(USER);
+    renderSecurity();
+  };
+  if(window.__secTimer){ clearInterval(window.__secTimer); window.__secTimer=null; }
+  var _lastTouch=Date.now();
+  window.__secTimer=setInterval(function(){
+    var el=$("secNowDur");
+    if(!el){ clearInterval(window.__secTimer); window.__secTimer=null; return; }
+    if(c) el.textContent=fmtDur(Date.now()-c.t0);
+    if(Date.now()-_lastTouch>15000){ _lastTouch=Date.now(); sessTouch(); }
+  },1000);
+}
+function renderSetting(){
+  if(ROUTE==="account"){
+    renderAccountInfo(); renderAccountPw();
+    var tabs=$("accTabs");
+    if(tabs) tabs.querySelectorAll("button").forEach(function(b){
+      b.addEventListener("click",function(){
+        tabs.querySelectorAll("button").forEach(function(x){ x.classList.remove("on"); });
+        b.classList.add("on");
+        var info=$("accInfo"), pw=$("accPw");
+        if(info) info.hidden=(b.dataset.a!=="info");
+        if(pw) pw.hidden=(b.dataset.a!=="pw");
+      });
+    });
+  }else if(ROUTE==="keamanan"){
+    renderSecurity();
+  }
+  var ml=$("metaLine");
+  if(ml) ml.textContent="Setting · akun & keamanan · data "+(DATA.meta&&DATA.meta.generated?DATA.meta.generated:"—");
+}
+
 /* ---- halaman ---- */
 function pageHTML(){
+  if(ROUTE==="account") return accountHTML();
+  if(ROUTE==="keamanan") return securityHTML();
   var cards=(BREAKS[ROUTE]||[]).map(function(b){
     var isAch=(b.map==="byAm"||b.map==="byPa"||b.map==="byProm");
     var sub=isAch?"":' <span class="muted-sm" id="'+b.id+'sub"></span>';
@@ -988,6 +1192,8 @@ function pageHTML(){
   return h;
 }
 function pageHeadHTML(){
+  if(ROUTE==="account") return '<div class="pagehead"><h2>Account</h2><span class="muted-sm">Info akun &amp; ubah kata sandi</span></div>';
+  if(ROUTE==="keamanan") return '<div class="pagehead"><h2>Keamanan</h2><span class="muted-sm">Riwayat akun yang membuka web</span></div>';
   var p=PAGES[ROUTE];
   if(!p.scope) return '<div class="pagehead"><h2>'+p.title+'</h2></div>';
   if(LOCK && LOCK.route===ROUTE)
@@ -1042,7 +1248,8 @@ function renderRoute(){
   });
   var BRAND="Qoala Gadget Protection x MAP Tech";
   $("pageTitle").textContent=BRAND;
-  $("eyebrow").textContent="SALES MONITORING · "+((PAGES[ROUTE]&&PAGES[ROUTE].title||"Summary").toUpperCase());
+  var _pg=PAGES[ROUTE]||{};
+  $("eyebrow").textContent=_pg.eyebrow||("SALES MONITORING · "+((_pg.title||"Summary").toUpperCase()));
   var g=$("greet");
   if(g){
     if(USER){
@@ -1059,7 +1266,14 @@ function renderRoute(){
   $("pageHead").innerHTML=pageHeadHTML();
   $("pageBody").innerHTML=pageHTML();
   bindPage();
-  render(aggregate());
+  var isSet=(ROUTE==="account"||ROUTE==="keamanan");
+  document.body.classList.toggle("settings-mode",isSet);
+  if(isSet){
+    var ps=$("periodSub"); if(ps) ps.textContent="Pengaturan akun & keamanan";
+    renderSetting();
+  }else{
+    render(aggregate());
+  }
   document.body.classList.remove("nav-open");
   window.scrollTo(0,0);
 }
@@ -1182,6 +1396,8 @@ function applyUser(u){
         BLOCKED=true; ALLOWED_ROUTES=[];
         warn="Akses belum dibuka: "+hint+". Demi keamanan data tidak ditampilkan. Perbaiki nama/role di <b>Master_user.xlsx</b>, lalu jalankan refresh data.";
       }
+    }else{
+      ALLOWED_ROUTES=["summary","spa","pa","promotor","account","keamanan"];
     }
   }
   applyAccessUI();
@@ -1192,6 +1408,8 @@ function applyAccessUI(){
   document.querySelectorAll(".side-nav a").forEach(function(a){
     a.style.display=ALLOWED_ROUTES.indexOf(a.dataset.route)>=0?"":"none";
   });
+  var sl=document.getElementById("sideSetLbl");
+  if(sl) sl.style.display=(ALLOWED_ROUTES.indexOf("account")>=0)?"":"none";
   var su=$("sideUser");
   if(su){
     if(USER){
@@ -1210,6 +1428,7 @@ function syncOrgFilters(){
 function enter(u,persist){
   applyUser(u);
   if(persist){ try{ sessionStorage.setItem("qoala.session",u.u); }catch(e){} }
+  if(persist||!sessCurrentId()) sessStart(u); else sessTouch();
   var lg=$("login"); if(lg) lg.hidden=true;
   var le=$("loginErr"); if(le){ le.textContent=""; le.classList.remove("on"); }
   var lp=$("loginPass"); if(lp) lp.value="";
@@ -1226,11 +1445,13 @@ function showLogin(msg){
 function doLogin(){
   var u=findUser($("loginUser").value);
   if(!u){ showLogin("Email tidak terdaftar."); return; }
-  if(u.h!==hashPw($("loginPass").value)){ showLogin("Password salah."); return; }
+  if(effHash(u)!==hashPw($("loginPass").value)){ showLogin("Password salah."); return; }
   enter(u,true);
 }
 function doLogout(){
+  sessTouch();
   try{ sessionStorage.removeItem("qoala.session"); }catch(e){}
+  try{ sessionStorage.removeItem("qoala.sessid"); }catch(e){}
   window.location.reload();
 }
 var _lf=$("loginForm"); if(_lf) _lf.addEventListener("submit",function(e){ e.preventDefault(); doLogin(); });
@@ -1282,6 +1503,9 @@ function startDashboard(){
   ROUTE=PAGES[h0]?h0:"summary";
   if(!location.hash) location.hash="#/summary";
   $("sideFoot").innerHTML=fmtInt(DATA.facts.length)+" polis · "+DATA.months.length+" bulan<br>Target Okt-2026: "+((DATA.target&&DATA.target.length)||0)+" store";
+  setInterval(sessTouch,20000);
+  document.addEventListener("visibilitychange",function(){ if(document.hidden) sessTouch(); });
+  window.addEventListener("beforeunload",sessTouch);
   renderRoute();
 }
 if(DATA&&DATA.months){ init(); }

@@ -4,6 +4,10 @@ Data-raw.xlsx
 # Master akun login (berisi password) - jangan di-commit
 Master_user.xlsx
 
+# Patch kata sandi hasil halaman Setting > Account (berisi password) - jangan di-commit
+password-patch.json
+riwayat-akses-*.csv
+
 # Lock file sementara Excel
 ~$*
 
