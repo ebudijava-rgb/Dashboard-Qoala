@@ -13,3 +13,6 @@ riwayat-akses-*.csv
 
 # Hasil ekspor sementara
 dashboard/data/*.tmp
+
+# Gambar laporan (hasil screenshot) - tidak di-commit
+reports/
