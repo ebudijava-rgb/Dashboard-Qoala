@@ -79,6 +79,7 @@ var PAGES = {
   spa:{title:"SPA", scope:"spa", list:"spa", label:"Pilih SPA"},
   pa:{title:"PA", scope:"pa", list:"pa", label:"Pilih PA"},
   promotor:{title:"Promotor", scope:"prom", list:"prom", label:"Pilih Promotor"},
+  best:{title:"Best Achievement", scope:null, eyebrow:"SALES MONITORING · BEST ACHIEVEMENT"},
   account:{title:"Account", scope:null, eyebrow:"SETTING · ACCOUNT", admin:1},
   keamanan:{title:"Keamanan", scope:null, eyebrow:"SETTING · KEAMANAN", admin:1}
 };
@@ -632,6 +633,7 @@ function cmpTip(c, kind, isNoP){
 }
 
 function render(agg){
+  if(ROUTE==="best"){ renderBest(); return; }
   var vis=visibleMonths();
   var labels=vis.map(function(i){return ymLabel(DATA.months[i]);});
   var nop=vis.map(function(i){return agg.mNop[i];});
@@ -985,6 +987,113 @@ function renderTarget(){
     '<td>'+nDone+' / '+fr.length+' tercapai</td></tr>';
 }
 
+/* ================= BEST ACHIEVEMENT (peringkat PA / Promotor) =================
+   Angka diambil dari mesin yang sama dengan tabel Target vs Achievement:
+   baris target (Target.xlsx) + aktual bulan target (Data-raw.xlsx), setelah
+   semua filter & pembatasan scope (LOCK) diterapkan. Jadi total di halaman ini
+   selalu sama dengan baris TOTAL tabel tersebut. */
+var BESTS={kind:"pa",sort:"ach"};
+function bestHTML(){
+  var tm=DATA.targetMeta||{};
+  var lbl=tm.month?ymLabel(tm.month):"—";
+  var el0=elapsedOf();
+  return '<section class="card" id="bestSec">'+
+    '<div class="card-h row"><div><h2>Peringkat — '+lbl+' <span class="muted-sm">data per tgl '+(el0||"—")+'</span></h2>'+
+      '<p class="muted" id="bestNote"></p></div>'+
+      '<div class="tabs" id="bestTabs"><button data-k="pa" type="button">By PA</button><button data-k="prom" type="button">By Promotor</button></div></div>'+
+    '<div class="tgt-controls"><select id="bestSort">'+
+      '<option value="ach">Urut: Achievement % tertinggi</option>'+
+      '<option value="gap">Urut: Sisa target GWP terbesar</option>'+
+      '<option value="gwp">Urut: GWP aktual terbesar</option>'+
+      '<option value="tg">Urut: Target GWP terbesar</option></select>'+
+      '<span class="muted-sm hide-sm">Achievement = realisasi s/d tanggal berjalan · Estimasi = perkiraan akhir bulan · medali untuk 3 pencapaian terbaik</span></div>'+
+    '<div id="bestList" class="ba-list"></div>'+
+    '<p class="muted-sm" id="bestFoot" style="margin:10px 0 0"></p>'+
+  '</section>';
+}
+function bestGroupRows(rd,kind){
+  var g={}, arr=[];
+  (rd.rows||[]).forEach(function(t){
+    var raw=String((kind==="pa"?(t.pa||""):(t.pr||""))||"").trim();
+    var isB=(!raw||isBlankEntry(raw)||norm(raw)==="(kosong)"||raw==="-");
+    var nm=isB?("(Tanpa "+(kind==="pa"?"PA":"Promotor")+")"):raw;
+    var k=norm(nm), o=g[k];
+    if(!o){ o=g[k]={name:nm,blank:isB,tn:0,tg:0,an:0,ag:0,ns:0,par:{}}; arr.push(o); }
+    var a=rd.act[norm(t.s)]||{n:0,g:0};
+    o.tn+=t.tn||0; o.tg+=t.tg||0; o.an+=a.n; o.ag+=a.g; o.ns++;
+    var pn=clean(kind==="pa"?(t.spa||BLANK):(t.pa||BLANK));
+    o.par[pn]=(o.par[pn]||0)+1;
+  });
+  arr.forEach(function(o){
+    var best=null,bc=-1;
+    Object.keys(o.par).forEach(function(p){ if(o.par[p]>bc){ bc=o.par[p]; best=p; } });
+    o.parent=best;
+    o.eG=o.ag*rd.fac;
+    o.ach=(o.tg>0)?o.ag/o.tg:(o.tn>0?o.an/o.tn:NaN);
+    o.est=(o.tg>0)?o.eG/o.tg:(o.tn>0?(o.an*rd.fac)/o.tn:NaN);
+    o.st=tgtStatus(o.est,(o.tg>0||o.tn>0));
+    delete o.par;
+  });
+  return arr;
+}
+function renderBest(){
+  var list=$("bestList"); if(!list) return;
+  var tabs=$("bestTabs");
+  if(tabs) tabs.querySelectorAll("button").forEach(function(b){ b.classList.toggle("on",b.dataset.k===BESTS.kind); });
+  var so=$("bestSort"); if(so) so.value=BESTS.sort;
+  var note=$("bestNote"), foot=$("bestFoot");
+  var rd=targetRowData();
+  if(!rd||!rd.rows||!rd.rows.length){
+    list.innerHTML='<p class="muted">Belum ada data target untuk filter ini.</p>';
+    if(note) note.textContent="Target.xlsx belum tersedia atau semua store tersaring filter.";
+    if(foot) foot.textContent="";
+    return;
+  }
+  var rows=bestGroupRows(rd,BESTS.kind), s=BESTS.sort;
+  rows.sort(function(a,b){
+    if(s==="gap") return (b.tg-b.ag)-(a.tg-a.ag);
+    if(s==="gwp") return b.ag-a.ag;
+    if(s==="tg") return b.tg-a.tg;
+    return (isFinite(b.ach)?b.ach:-1)-(isFinite(a.ach)?a.ach:-1);
+  });
+  /* grup tanpa nama (store belum punya PA/Promotor) selalu di bawah */
+  rows=rows.filter(function(o){ return !o.blank; }).concat(rows.filter(function(o){ return o.blank; }));
+  function p1(v){ return isFinite(v)?(v*100).toLocaleString("id-ID",{maximumFractionDigits:1})+"%":"—"; }
+  var tG=0,aG=0,tN=0,aN=0,done=0;
+  rows.forEach(function(o){ tG+=o.tg; aG+=o.ag; tN+=o.tn; aN+=o.an; if(o.st.t==="Tercapai") done++; });
+  var ach=tG>0?aG/tG:(tN>0?aN/tN:NaN);
+  var eG=aG*rd.fac, est=tG>0?eG/tG:(tN>0?aN*rd.fac/tN:NaN);
+  var kindTxt=BESTS.kind==="pa"?"PA":"Promotor";
+  var nNamed=rows.filter(function(o){ return !o.blank; }).length, nBlank=rows.length-nNamed;
+  var tmLbl=ymLabel(DATA.targetMeta.month);
+  if(note) note.textContent=tmLbl+" · data per tgl "+rd.elapsed+" · "+nNamed+" "+kindTxt+(nBlank?" (+"+nBlank+" tanpa "+(BESTS.kind==="pa"?"PA":"promotor")+")":"")+" · target "+fmtIDR(tG)+" · aktual "+fmtIDR(aG)+" ("+p1(ach)+") · estimasi "+fmtIDR(eG)+" ("+p1(est)+") · "+done+" tercapai"+(SEARCH_Q?(' · cari "'+SEARCH_Q+'"'):"");
+  var html="";
+  rows.forEach(function(o,i){
+    var rk=i+1;
+    var medal=("ach"===BESTS.sort&&!o.blank)?(rk===1?"🥇":rk===2?"🥈":rk===3?"🥉":""):"";
+    var w=isFinite(o.ach)?Math.max(0,Math.min(100,o.ach*100)):0;
+    var we=isFinite(o.est)?Math.max(0,Math.min(100,o.est*100)):0;
+    html+='<div class="ba-card'+((rk<=3&&BESTS.sort==="ach"&&!o.blank)?" r"+rk:"")+'">'+
+      '<div class="ba-rank">'+(medal?'<span class="ba-medal">'+medal+'</span>':'<span class="ba-no">'+rk+'</span>')+'</div>'+
+      '<div class="ba-id"><div class="ba-name" title="'+esc(o.name)+'">'+esc(o.name)+'</div>'+
+        '<div class="ba-sub">'+esc(o.blank?(fmtInt(o.ns)+' store · tanpa '+(BESTS.kind==="pa"?"PA":"promotor")):((BESTS.kind==="pa"?"SPA ":"PA ")+(o.parent||"—")+' · '+fmtInt(o.ns)+' store'))+'</div></div>'+
+      '<div class="ba-mid"><span class="bar-track"><span class="bar-fill" style="width:'+w.toFixed(1)+'%"></span>'+
+        (we>w?'<span class="ba-estmark" style="left:'+Math.min(99.5,we).toFixed(1)+'%"></span>':'')+'</span>'+
+        '<div class="ba-legend"><b>Ach '+p1(o.ach)+'</b><span>Est '+p1(o.est)+'</span></div></div>'+
+      '<div class="ba-money"><b>'+fmtIDR(o.ag)+'</b><span>dari '+fmtIDR(o.tg)+'</span></div>'+
+      '<div class="ba-stat"><span class="pill '+o.st.c+'">'+o.st.t+'</span></div>'+
+    '</div>';
+  });
+  list.innerHTML=html;
+  if(foot) foot.textContent="Total di atas hanya store yang punya target (Target.xlsx) dan lolos filter — angkanya sama dengan baris TOTAL pada tabel Target vs Achievement. Estimasi EOM = aktual ×"+rd.fac.toLocaleString("id-ID",{maximumFractionDigits:2})+".";
+  var fVals=[F.year,F.month,F.ins,F.part,F.am,F.spa,F.pa,F.prom,F.prod,F.store,F.status];
+  var actF=fVals.filter(function(v){return v&&v.length;}).length;
+  var nVal=fVals.reduce(function(x,v){return x+(v?v.length:0);},0);
+  if($("filterCount")) $("filterCount").textContent=((actF?(actF+" filter aktif"+(nVal>actF?" ("+nVal+" pilihan)":"")):"Tanpa filter")+(SEARCH_Q?(' · cari "'+SEARCH_Q+'"'):""))+" · "+rows.length+" "+kindTxt;
+  if($("periodSub")) $("periodSub").textContent="Periode target: "+tmLbl+" · data per tgl "+rd.elapsed+" · "+rows.length+" "+kindTxt;
+  if($("metaLine")) $("metaLine").textContent="Dibuat "+((DATA.meta&&DATA.meta.generated)||"")+" · Sumber: Target.xlsx ("+((DATA.target&&DATA.target.length)||0)+" store) + Data-raw.xlsx · estimasi EOM = aktual ×"+rd.fac.toLocaleString("id-ID",{maximumFractionDigits:2});
+}
+
 /* ================= SETTING (khusus Administrator) =================
    Halaman Account (info akun + ubah kata sandi) dan Keamanan (riwayat akses).
    Dashboard ini statis (tanpa server), jadi:
@@ -1189,6 +1298,7 @@ function renderSetting(){
 function pageHTML(){
   if(ROUTE==="account") return accountHTML();
   if(ROUTE==="keamanan") return securityHTML();
+  if(ROUTE==="best") return bestHTML();
   var cards=(BREAKS[ROUTE]||[]).map(function(b){
     var isAch=(b.map==="byAm"||b.map==="byPa"||b.map==="byProm");
     var sub=isAch?"":' <span class="muted-sm" id="'+b.id+'sub"></span>';
@@ -1238,6 +1348,7 @@ function pageHTML(){
 function pageHeadHTML(){
   if(ROUTE==="account") return '<div class="pagehead"><h2>Account</h2><span class="muted-sm">Info akun &amp; ubah kata sandi</span></div>';
   if(ROUTE==="keamanan") return '<div class="pagehead"><h2>Keamanan</h2><span class="muted-sm">Riwayat akun yang membuka web</span></div>';
+  if(ROUTE==="best") return '<div class="pagehead"><h2>Best Achievement</h2><span class="muted-sm">Peringkat PA &amp; Promotor berdasarkan pencapaian target GWP</span></div>';
   var p=PAGES[ROUTE];
   if(!p.scope) return '<div class="pagehead"><h2>'+p.title+'</h2></div>';
   if(LOCK && LOCK.route===ROUTE)
@@ -1276,6 +1387,12 @@ function bindPage(){
   if(so){ so.value=st.sort; so.addEventListener("change",function(e){ st.sort=e.target.value; renderTarget(); }); }
   var rp=$("tgtRpt");
   if(rp) rp.addEventListener("click",function(){ RPT=!RPT; renderTarget(); });
+  var bt=$("bestTabs");
+  if(bt) bt.querySelectorAll("button").forEach(function(b){
+    b.addEventListener("click",function(){ BESTS.kind=b.dataset.k; renderBest(); });
+  });
+  var bso=$("bestSort");
+  if(bso) bso.addEventListener("change",function(e){ BESTS.sort=e.target.value; renderBest(); });
   if(tt) tt.querySelectorAll("button").forEach(function(b){
     if(b.dataset.t===st.tab){ tt.querySelectorAll("button").forEach(function(x){x.classList.remove("on");}); b.classList.add("on"); }
     b.addEventListener("click",function(){
@@ -1327,7 +1444,7 @@ function renderRoute(){
 /* ================= LOGIN + PEMBATASAN SCOPE =================
    Password disimpan sebagai hash FNV-1a 32-bit (hex) di data/summary.js.
    Ini gerbang akses, bukan keamanan sungguhan: seluruh data tetap ada di file JSON. */
-var USER=null, LOCK=null, BLOCKED=false, ALLOWED_ROUTES=["summary","spa","pa","promotor"];
+var USER=null, LOCK=null, BLOCKED=false, ALLOWED_ROUTES=["summary","spa","pa","promotor","best"];
 function hashPw(s){
   var h=2166136261>>>0; s=String(s==null?"":s);
   for(var i=0;i<s.length;i++){ h=(h^s.charCodeAt(i))>>>0; h=Math.imul(h,16777619)>>>0; }
@@ -1404,7 +1521,7 @@ function roleKind(r){
   return "?";
 }
 function applyUser(u){
-  USER=u||null; LOCK=null; BLOCKED=false; ALLOWED_ROUTES=["summary","spa","pa","promotor"];
+  USER=u||null; LOCK=null; BLOCKED=false; ALLOWED_ROUTES=["summary","spa","pa","promotor","best"];
   var warn="";
   if(USER){
     var kind=roleKind(USER.r), want=null, hint="";
@@ -1436,14 +1553,14 @@ function applyUser(u){
     if(kind!=="admin"){
       if(want){
         LOCK={field:want.field,key:want.key,idx:want.idx,route:want.route,level:want.level,list:want.list,name:clean(DATA[want.list][want.idx])};
-        ALLOWED_ROUTES=["summary",LOCK.route];
+        ALLOWED_ROUTES=["summary",LOCK.route,"best"];
         F.am=[]; F.spa=[]; F.pa=[]; F.prom=[];
       }else{
         BLOCKED=true; ALLOWED_ROUTES=[];
         warn="Akses belum dibuka: "+hint+". Demi keamanan data tidak ditampilkan. Perbaiki nama/role di <b>Master_user.xlsx</b>, lalu jalankan refresh data.";
       }
     }else{
-      ALLOWED_ROUTES=["summary","spa","pa","promotor","account","keamanan"];
+      ALLOWED_ROUTES=["summary","spa","pa","promotor","best","account","keamanan"];
     }
   }
   applyAccessUI();

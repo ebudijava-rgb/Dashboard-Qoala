@@ -336,3 +336,33 @@ table.tgt th.sticky.rk,table.tgt td.sticky.rk{text-align:center}
 
 /* di mode laporan tabel tampil penuh (tanpa scroll internal) -> matikan sticky agar urutan baris normal */
 #tgtSec.rpt-mode #tgtTable th,#tgtSec.rpt-mode #tgtTable td{position:static}
+
+/* ---- Best Achievement: leaderboard PA / Promotor ---- */
+.ba-list{display:flex;flex-direction:column;gap:8px;margin-top:12px}
+.ba-card{display:grid;grid-template-columns:46px minmax(0,1.35fr) minmax(150px,1.1fr) auto auto;
+  grid-template-areas:"rank id mid money stat";gap:14px;align-items:center;
+  border:1px solid var(--line);border-radius:14px;padding:10px 14px;background:#fffdfa}
+.ba-card.r1{border-color:#eab308;background:#fffdf3}
+.ba-card.r2{border-color:#cbd5e1;background:#fcfcfd}
+.ba-card.r3{border-color:#d8a07a;background:#fffaf5}
+.ba-rank{grid-area:rank;display:flex;align-items:center;justify-content:center}
+.ba-medal{font-size:26px;line-height:1}
+.ba-no{width:30px;height:30px;border-radius:999px;background:#f4f0e8;color:#78716c;display:flex;align-items:center;justify-content:center;font-size:12.5px;font-weight:800}
+.ba-id{grid-area:id;min-width:0}
+.ba-name{font-weight:800;font-size:14px;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ba-sub{font-size:11.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ba-mid{grid-area:mid;min-width:0}
+.ba-mid .bar-track{display:block;position:relative;background:#f2ece1;border-radius:999px;height:8px;overflow:visible}
+.ba-mid .bar-fill{display:block;height:100%;background:var(--brand);border-radius:999px}
+.ba-estmark{position:absolute;top:-2px;bottom:-2px;width:2px;background:#57534e;border-radius:2px}
+.ba-legend{display:flex;justify-content:space-between;gap:10px;font-size:11.5px;margin-top:5px;color:var(--muted);font-variant-numeric:tabular-nums}
+.ba-legend b{color:var(--ink);font-size:12px}
+.ba-money{grid-area:money;text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+.ba-money b{display:block;font-size:13px;color:var(--ink)}
+.ba-money span{display:block;font-size:11.5px;color:var(--muted)}
+.ba-stat{grid-area:stat}
+@media(max-width:760px){
+  .ba-card{grid-template-columns:34px minmax(0,1fr) auto;grid-template-areas:"rank id stat" "mid mid mid" "money money money";gap:6px 10px;padding:10px 12px}
+  .ba-money{text-align:left;display:flex;gap:8px;align-items:baseline}
+  .ba-money b,.ba-money span{display:inline}
+}
