@@ -97,6 +97,7 @@ function scopeVal(){
 function passFact(f, ignoreYearMonth){
   var ym=DATA.months[f[0]];
   if(LOCK && String(f[LOCK.field])!==String(LOCK.idx)) return false;
+  if(BLOCKED) return false;
   if(SEARCH_Q && !searchHitStore(f[4])) return false;
   if(!ignoreYearMonth){
     if(!fHit(F.year,ym.slice(0,4))) return false;
@@ -782,6 +783,7 @@ function selNormArr(list, arr){
 function inSel(a,name){ return a===null||a.indexOf(name)>=0; }
 function targetFilterRows(){
   if(!DATA.target) return [];
+  if(BLOCKED) return [];
   searchPrep();
   var selStore=selNormArr(DATA.store,F.store), selPart=selNormArr(DATA.partner,F.part), selSpa=selNormArr(DATA.spa,F.spa);
   var selPa=selNormArr(DATA.pa,F.pa), selProm=selNormArr(DATA.prom,F.prom), selAm=selNormArr(DATA.am,F.am);
@@ -1065,7 +1067,7 @@ function renderRoute(){
 /* ================= LOGIN + PEMBATASAN SCOPE =================
    Password disimpan sebagai hash FNV-1a 32-bit (hex) di data/summary.js.
    Ini gerbang akses, bukan keamanan sungguhan: seluruh data tetap ada di file JSON. */
-var USER=null, LOCK=null, ALLOWED_ROUTES=["summary","spa","pa","promotor"];
+var USER=null, LOCK=null, BLOCKED=false, ALLOWED_ROUTES=["summary","spa","pa","promotor"];
 function hashPw(s){
   var h=2166136261>>>0; s=String(s==null?"":s);
   for(var i=0;i<s.length;i++){ h=(h^s.charCodeAt(i))>>>0; h=Math.imul(h,16777619)>>>0; }
@@ -1110,21 +1112,76 @@ function findUser(login){
   for(var i=0;i<us.length;i++){ if(norm(us[i].u)===l) return us[i]; }
   return null;
 }
+/* ---- pemetaan organisasi: PA -> SPA, Promotor -> PA ----
+   Sumber utama Target.xlsx (kolom spa/pa/pr per store), cadangan dari data transaksi. */
+function parentName(kind, idx){
+  var list=DATA[kind==="pa"?"pa":"prom"]||[];
+  var n=norm(clean(list[idx]||""));
+  if(!n) return null;
+  var cnt={}, best=null, bc=0, i;
+  function bump(v){ if(!v) return; var k=norm(v); cnt[k]=(cnt[k]||0)+1; if(cnt[k]>bc){ bc=cnt[k]; best=v; } }
+  var t=DATA.target||[];
+  for(i=0;i<t.length;i++){
+    if(kind==="pa"){ if(norm(t[i].pa||"")===n) bump(t[i].spa); }
+    else { if(norm(t[i].pr||"")===n) bump(t[i].pa); }
+  }
+  if(best) return best;
+  var fa=DATA.facts||[];
+  for(i=0;i<fa.length;i++){
+    var f=fa[i];
+    if(kind==="pa"){ if(f[8]===idx) bump(DATA.spa[f[7]]); }
+    else { if(f[9]===idx) bump(DATA.pa[f[8]]); }
+  }
+  return best;
+}
+function roleKind(r){
+  r=norm(r||"");
+  if(!r) return "admin";   /* akun tanpa role = perilaku lama (akses semua) */
+  if(r==="admin"||r.indexOf("admin")===0) return "admin";
+  if(r.indexOf("partnership")>=0||r==="pa") return "pa";
+  if(r==="spa"||r.indexOf("spa")===0||r.indexOf("spa ")>0) return "spa";
+  if(r.indexOf("promot")>=0) return "prom";
+  return "?";
+}
 function applyUser(u){
-  USER=u||null; LOCK=null; ALLOWED_ROUTES=["summary","spa","pa","promotor"];
+  USER=u||null; LOCK=null; BLOCKED=false; ALLOWED_ROUTES=["summary","spa","pa","promotor"];
   var warn="";
-  if(USER && norm(USER.r)!=="admin"){
-    var r=norm(USER.r);
-    var spec = r==="spa"?{list:"spa",field:7,tkey:"spa",route:"spa",level:1}
-             : r==="pa"?{list:"pa",field:8,tkey:"pa",route:"pa",level:2}
-             : {list:"prom",field:9,tkey:"pr",route:"promotor",level:3};
-    var arr=DATA[spec.list]||[], idx=findScopeIdx(arr,USER.n);
-    if(idx>=0){
-      LOCK={field:spec.field,key:spec.tkey,idx:idx,route:spec.route,level:spec.level,list:spec.list,name:clean(arr[idx])};
-      ALLOWED_ROUTES=["summary",LOCK.route];
-      F.am=[]; F.spa=[]; F.pa=[]; F.prom=[];
-    }else{
-      warn="Akun <b>"+esc(USER.n||USER.u)+"</b> ("+esc(USER.r)+") belum cocok dengan daftar "+spec.route+" pada data, jadi pembatasan data tidak diterapkan. Mohon periksa ejaan nama di Master_user.xlsx.";
+  if(USER){
+    var kind=roleKind(USER.r), want=null, hint="";
+    if(kind==="pa"){
+      /* Partnership Associate: seluruh data SPA-nya (mis. Hari -> All SPA Denisahri) */
+      var paIdx=findScopeIdx(DATA.pa||[],USER.n);
+      if(paIdx>=0){
+        var spaName=parentName("pa",paIdx);
+        var spaIdx=spaName?findScopeIdx(DATA.spa||[],spaName):-1;
+        if(spaIdx>=0) want={level:1,route:"spa",list:"spa",key:"spa",field:7,idx:spaIdx};
+        else hint="SPA induk untuk PA <b>"+esc(USER.n)+"</b> tidak ditemukan";
+      } else hint="nama <b>"+esc(USER.n||USER.u)+"</b> tidak ada di daftar PA";
+    }else if(kind==="spa"){
+      var si=findScopeIdx(DATA.spa||[],USER.n);
+      if(si>=0) want={level:1,route:"spa",list:"spa",key:"spa",field:7,idx:si};
+      else hint="nama <b>"+esc(USER.n||USER.u)+"</b> tidak ada di daftar SPA";
+    }else if(kind==="prom"){
+      /* Promotor: seluruh data PA-nya (semua promotor & store di PA tsb) */
+      var prIdx=findScopeIdx(DATA.prom||[],USER.n);
+      if(prIdx>=0){
+        var paName=parentName("prom",prIdx);
+        var paIdx2=paName?findScopeIdx(DATA.pa||[],paName):-1;
+        if(paIdx2>=0) want={level:2,route:"pa",list:"pa",key:"pa",field:8,idx:paIdx2};
+        else hint="PA induk untuk promotor <b>"+esc(USER.n)+"</b> tidak ditemukan";
+      } else hint="nama <b>"+esc(USER.n||USER.u)+"</b> tidak ada di daftar Promotor";
+    }else if(kind!=="admin"){
+      hint="role <b>"+esc(USER.r||"(kosong)")+"</b> belum dikenali";
+    }
+    if(kind!=="admin"){
+      if(want){
+        LOCK={field:want.field,key:want.key,idx:want.idx,route:want.route,level:want.level,list:want.list,name:clean(DATA[want.list][want.idx])};
+        ALLOWED_ROUTES=["summary",LOCK.route];
+        F.am=[]; F.spa=[]; F.pa=[]; F.prom=[];
+      }else{
+        BLOCKED=true; ALLOWED_ROUTES=[];
+        warn="Akses belum dibuka: "+hint+". Demi keamanan data tidak ditampilkan. Perbaiki nama/role di <b>Master_user.xlsx</b>, lalu jalankan refresh data.";
+      }
     }
   }
   applyAccessUI();
@@ -1140,13 +1197,13 @@ function applyAccessUI(){
     if(USER){
       su.hidden=false;
       $("suName").textContent=USER.n||USER.u;
-      $("suRole").textContent=LOCK?(USER.r+" · akses terkunci"):(USER.r+" · akses semua data");
+      $("suRole").textContent=USER.r+(LOCK?(" · "+(LOCK.level===1?"SPA ":"PA ")+LOCK.name):(BLOCKED?" · tanpa akses":" · semua data"));
     } else su.hidden=true;
   }
 }
 function syncOrgFilters(){
   var lvl=LOCK?LOCK.level:-1;
-  var hide={am:(LOCK&&lvl>=0),spa:(LOCK&&lvl>=1)||ROUTE==="spa",pa:(LOCK&&lvl>=2)||ROUTE==="pa",prom:(LOCK&&lvl>=3)||ROUTE==="promotor"};
+  var hide={am:(LOCK&&lvl>=3),spa:(LOCK&&lvl>=1)||ROUTE==="spa",pa:(LOCK&&lvl>=2)||ROUTE==="pa",prom:(LOCK&&lvl>=3)||ROUTE==="promotor"};
   var map={am:"lblAm",spa:"lblSpa",pa:"lblPa",prom:"lblProm"};
   Object.keys(map).forEach(function(k){ var el=$(map[k]); if(el) el.style.display=hide[k]?"none":""; });
 }
