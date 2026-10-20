@@ -49,7 +49,7 @@ var TGT = {summary:{q:"",sort:"tg",tab:"all"},spa:{q:"",sort:"tg",tab:"all"},pa:
 var SEARCH_Q="", SEARCH_HAY=null, SEARCH_READY=false, searchTimer=null;
 /* Mode laporan (khusus Administrator): sembunyikan kolom PA, Promotor & kolom NoP,
    tampilkan semua baris tabel supaya mudah di-screenshot. Default mati. */
-var RPT=false;
+var RPT=false, SHOT=false;
 function isAdminUser(){ return !!(USER && roleKind(USER.r)==="admin"); }
 function searchPrep(){
   var q=norm((TGT[ROUTE]&&TGT[ROUTE].q)||"");
@@ -875,12 +875,49 @@ function growthCellYoy(r){
   return '<div class="gl"><span class="g-lbl">NoP</span>'+growthSpan(r.yyN,r.yn>0)+'</div>'+
          '<div class="gl"><span class="g-lbl">GWP</span>'+growthSpan(r.yyG,r.yg>0)+'</div>';
 }
+/* keterangan otomatis untuk Mode screenshot: filter aktif + periode target + urutan */
+function reportCaption(){
+  var bits=[];
+  [].slice.call(document.querySelectorAll(".filters .fld")).forEach(function(f){
+    var lblEl=f.querySelector("span"), txt=f.querySelector(".ms-txt");
+    if(!lblEl||!txt) return;
+    if(getComputedStyle(f).display==="none") return;
+    var v=(txt.textContent||"").trim();
+    if(v&&v!=="Semua") bits.push(lblEl.textContent.trim()+": "+v);
+  });
+  var tm=DATA.targetMeta||{}, el=elapsedOf();
+  var st=TGT[ROUTE]||{};
+  var sl={estHi:"Estimasi % tertinggi",tg:"Target GWP terbesar",achLo:"Achievement GWP terendah",achHi:"Achievement GWP tertinggi",gap:"Selisih GWP terbesar"}[st.sort]||"Target GWP terbesar";
+  return (bits.length?bits.join(" · ")+" · ":"")+"Target: "+(tm.month?ymLabel(tm.month):"—")+" (data per tgl "+(el||"—")+") · urutan: "+sl+(st.q?(' · cari "'+st.q+'"'):"");
+}
+/* Mode screenshot: kalau tabel masih lebih tinggi dari layar, perkecil skala
+   kartu target supaya semua baris + baris TOTAL masuk satu tangkapan layar. */
+function shotFit(){
+  var sec=$("tgtSec"); if(!sec) return;
+  sec.style.transform=""; sec.style.width="";
+  if(!SHOT) return;
+  var top=sec.getBoundingClientRect().top;
+  var avail=window.innerHeight-top-8;
+  var h=sec.getBoundingClientRect().height;
+  if(avail>120&&h>avail){
+    var k=Math.max(0.55,avail/h);
+    sec.style.transformOrigin="top left";
+    sec.style.transform="scale("+k.toFixed(3)+")";
+    sec.style.width=(100/k).toFixed(2)+"%";
+  }
+}
 function renderTarget(){
   if(!$("tgtTable")||!DATA.target||!DATA.target.length||!DATA.targetMeta) return;
   var _sec=$("tgtSec");
-  if(_sec) _sec.classList.toggle("rpt-mode",!!RPT);
+  var _on=!!(RPT||SHOT);
+  if(_sec){ _sec.classList.toggle("rpt-mode",_on); _sec.classList.toggle("shot-mode",!!SHOT); _sec.style.transform=""; _sec.style.width=""; }
+  document.body.classList.toggle("shot-mode",!!SHOT);
   var _rb=$("tgtRpt");
-  if(_rb){ _rb.classList.toggle("on",!!RPT); _rb.setAttribute("aria-pressed",RPT?"true":"false"); _rb.textContent=RPT?"Mode laporan: AKTIF":"Mode laporan"; }
+  if(_rb){ var a1=(RPT&&!SHOT); _rb.classList.toggle("on",a1); _rb.setAttribute("aria-pressed",a1?"true":"false"); _rb.textContent=a1?"Mode laporan: AKTIF":"Mode laporan"; }
+  var _sb=$("tgtShot");
+  if(_sb){ _sb.classList.toggle("on",!!SHOT); _sb.setAttribute("aria-pressed",SHOT?"true":"false"); _sb.textContent=SHOT?"Mode screenshot: AKTIF":"Mode screenshot"; }
+  var _cap=$("shotCap");
+  if(_cap){ _cap.hidden=!SHOT; _cap.textContent=SHOT?reportCaption():""; }
   var st=TGT[ROUTE];
   var tm=DATA.targetMeta;
   var rd=targetRowData();
@@ -985,6 +1022,7 @@ function renderTarget(){
     '<td>'+((function(){ var n=dayNeed(tG2,aG2); return isFinite(n)?(n<=0?'<span class="flat">—</span>':fmtIDR(n)):'<span class="flat">—</span>'; })())+'</td>'+
     '<td class="gcell">'+growthCell(totRow)+'</td><td class="gcell">'+growthCellYoy(totRow)+'</td>'+
     '<td>'+nDone+' / '+fr.length+' tercapai</td></tr>';
+  shotFit();
 }
 
 /* ================= BEST ACHIEVEMENT (peringkat PA / Promotor) =================
@@ -1329,12 +1367,17 @@ function pageHTML(){
   var yyLbl=yyM?ymLabel(yyM).slice(0,3):"thn lalu";
   var yyLblFull=yyM?ymLabel(yyM):"bulan yang sama tahun lalu";
   var el0=elapsedOf();
-  var rptBtn=isAdminUser()?'<button id="tgtRpt" class="btn ghost sm" type="button" aria-pressed="false" title="Mode laporan: sembunyikan kolom PA, Promotor, dan NoP + tampilkan semua baris supaya mudah di-screenshot">Mode laporan</button>':'';
+  var adminBtns="";
+  if(isAdminUser()){
+    adminBtns='<button id="tgtRpt" class="btn ghost sm" type="button" aria-pressed="false" title="Mode laporan: sembunyikan kolom PA, Promotor, dan NoP + tampilkan semua baris supaya mudah di-screenshot">Mode laporan</button>'+
+      '<button id="tgtShot" class="btn ghost sm" type="button" aria-pressed="false" title="Mode screenshot: tabel dirapatkan + kartu/tab/kontrol disembunyikan supaya semua store dan baris TOTAL muat dalam satu tangkapan layar">Mode screenshot</button>';
+  }
   h+='<section class="card" id="tgtSec"><div class="card-h row"><div><h2>Target vs Achievement — '+tmLbl+' <span class="muted-sm">data per tgl '+(el0||"—")+'</span></h2><p class="muted" id="tgtNote"></p></div>'+
      '<div class="tabs" id="tgtTabs"><button data-t="all" class="on">Semua</button><button data-t="behind">Belum 100%</button><button data-t="done">Tercapai</button></div></div>'+
      '<div class="kpis" id="tgtKpis" style="margin-top:12px"></div>'+
      '<div class="tgt-controls"><input id="tgtSearch" type="search" placeholder="Cari store / PA / promotor…"><span class="muted-sm hide-sm">pencarian berlaku ke seluruh halaman (kartu KPI, tren, blok, tabel)</span><select id="tgtSort"><option value="estHi">Urut: Estimasi % tertinggi</option><option value="tg">Urut: Target GWP terbesar</option><option value="achLo">Urut: Achievement GWP terendah</option><option value="achHi">Urut: Achievement GWP tertinggi</option><option value="gap">Urut: Selisih GWP terbesar</option></select>'+
-          rptBtn+'</div>'+
+          adminBtns+'</div>'+
+     '<div id="shotCap" class="shot-cap" hidden></div>'+
      '<div class="tbl-wrap tgt-wrap"><table id="tgtTable" class="tgt"><thead><tr><th class="sticky rk">No</th><th class="sticky">Store</th><th>PA</th><th>Promotor</th><th>Tgt NoP</th><th>Akt NoP</th><th>Ach NoP</th><th>Tgt GWP</th><th>Akt GWP</th><th>Ach GWP</th><th>Est NoP</th><th>Est GWP</th><th>Est Ach</th><th title="Target harian = sisa target GWP ÷ sisa hari bulan berjalan. GWP yang harus masuk tiap hari agar target store tercapai.">Target/hari</th><th class="gcol" title="Growth = estimasi akhir bulan (EOM) bulan berjalan vs realisasi '+pmLbl+'">Growth vs '+pmLbl+'</th><th class="gcol" title="YoY = estimasi akhir bulan (EOM) bulan berjalan vs realisasi '+yyLblFull+'">YoY vs '+yyLbl+'</th><th>Status</th></tr></thead><tbody></tbody><tfoot></tfoot></table></div></section>';
   if(grid1) h+='<div class="cols2">'+grid1+'</div>';
   if(rest) h+=rest;
@@ -1386,7 +1429,9 @@ function bindPage(){
   }
   if(so){ so.value=st.sort; so.addEventListener("change",function(e){ st.sort=e.target.value; renderTarget(); }); }
   var rp=$("tgtRpt");
-  if(rp) rp.addEventListener("click",function(){ RPT=!RPT; renderTarget(); });
+  if(rp) rp.addEventListener("click",function(){ if(RPT&&!SHOT){ RPT=false; } else { RPT=true; SHOT=false; } renderTarget(); });
+  var sp=$("tgtShot");
+  if(sp) sp.addEventListener("click",function(){ if(SHOT){ SHOT=false; RPT=false; } else { SHOT=true; RPT=true; } renderTarget(); });
   var bt=$("bestTabs");
   if(bt) bt.querySelectorAll("button").forEach(function(b){
     b.addEventListener("click",function(){ BESTS.kind=b.dataset.k; renderBest(); });
@@ -1429,6 +1474,8 @@ function renderRoute(){
   $("pageHead").innerHTML=pageHeadHTML();
   $("pageBody").innerHTML=pageHTML();
   bindPage();
+  /* Mode screenshot hanya berlaku di halaman yang punya tabel target */
+  if(!$("tgtTable")){ SHOT=false; RPT=false; document.body.classList.remove("shot-mode"); }
   var isSet=(ROUTE==="account"||ROUTE==="keamanan");
   document.body.classList.toggle("settings-mode",isSet);
   if(isSet){

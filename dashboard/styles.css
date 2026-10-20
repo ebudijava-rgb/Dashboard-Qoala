@@ -366,3 +366,27 @@ table.tgt th.sticky.rk,table.tgt td.sticky.rk{text-align:center}
   .ba-money{text-align:left;display:flex;gap:8px;align-items:baseline}
   .ba-money b,.ba-money span{display:inline}
 }
+
+/* ---- Mode screenshot (khusus Administrator): semua store + TOTAL muat dalam 1 layar ---- */
+body.shot-mode .topbar .greet,body.shot-mode .topbar .eyebrow,body.shot-mode .topbar .sub,body.shot-mode #burger{display:none}
+body.shot-mode .topbar{padding:10px 0 8px}
+body.shot-mode .topbar h1{font-size:16px;margin:0}
+body.shot-mode .top-actions,body.shot-mode .filters,body.shot-mode .foot,body.shot-mode #pageHead,body.shot-mode #warnBar{display:none}
+body.shot-mode #pageBody > *:not(#tgtSec){display:none}
+#tgtSec.shot-mode #tgtTabs,#tgtSec.shot-mode #tgtKpis,#tgtSec.shot-mode .tgt-controls,#tgtSec.shot-mode .card-h p.muted{display:none}
+#tgtSec.shot-mode .card-h{padding-bottom:4px}
+#tgtSec.shot-mode .shot-cap{display:block}
+.shot-cap{font-size:12px;font-weight:800;color:#57534e;margin:2px 0 8px}
+#tgtSec.shot-mode table.tgt{font-size:11.5px;min-width:0}
+#tgtSec.shot-mode table.tgt th,#tgtSec.shot-mode table.tgt td{padding:3px 8px}
+#tgtSec.shot-mode table.tgt th{font-size:9.5px}
+#tgtSec.shot-mode .ach .bar-track{width:36px;height:6px}
+#tgtSec.shot-mode .gcell{font-size:10px;line-height:1.2}
+#tgtSec.shot-mode .pill{padding:2px 7px;font-size:10px}
+#tgtSec.shot-mode .rk{font-size:11px}
+#tgtSec.shot-mode.card{padding:12px 14px}
+#tgtSec.shot-mode table.tgt{font-size:11px}
+#tgtSec.shot-mode table.tgt th,#tgtSec.shot-mode table.tgt td{padding:2px 8px}
+#tgtSec.shot-mode .card-h h2{font-size:15px}
+#tgtSec.shot-mode .shot-cap{margin:0 0 6px;font-size:11.5px}
+body.shot-mode{overflow:hidden}
