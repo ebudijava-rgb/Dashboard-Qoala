@@ -79,7 +79,7 @@ select{background:#faf9f6;border:1px solid var(--line);border-radius:10px;paddin
 .trend-list{margin:8px 0 0;padding-left:18px;font-size:13.5px;line-height:1.65}
 .bar-row{display:grid;grid-template-columns:1fr auto;gap:4px 10px;margin:9px 0;font-size:13px}
 .bar-track{grid-column:1/-1;background:#f2ece1;border-radius:999px;height:8px;overflow:hidden}
-.bar-fill{height:100%;background:linear-gradient(90deg,#f7c67f,var(--brand));border-radius:999px}
+.bar-fill{height:100%;background:var(--brand);border-radius:999px}
 .bar-row .n{font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .bar-row .v{color:var(--muted);font-variant-numeric:tabular-nums}
 .bar-row .v2{grid-column:1/-1;color:var(--muted);font-size:12px;font-variant-numeric:tabular-nums}
@@ -113,7 +113,7 @@ table.tgt th.sticky,table.tgt td.sticky{position:sticky;left:0;background:#fff;z
 table.tgt thead th.sticky{z-index:3;background:var(--navy);color:#fff}
 .ach{display:flex;align-items:center;gap:6px;justify-content:flex-end}
 .ach .bar-track{width:52px;background:#f2ece1;border-radius:999px;height:7px;overflow:hidden;flex:none}
-.ach .bar-fill{height:100%;background:linear-gradient(90deg,#f7c67f,var(--brand));border-radius:999px}
+.ach .bar-fill{height:100%;background:var(--brand);border-radius:999px}
 /* growth: est EOM bulan berjalan vs realisasi bulan sebelumnya */
 .gcell{line-height:1.42;font-size:11px;white-space:nowrap}
 .gcell .gl{display:flex;justify-content:flex-end;align-items:baseline;gap:5px}
@@ -314,3 +314,9 @@ table.tgt tfoot td{position:sticky;bottom:0;background:#f7f1e6;color:#3f3a33;fon
   border-top:2px solid var(--line-strong);white-space:nowrap;z-index:2;font-size:12px}
 table.tgt tfoot td.sticky{left:0;z-index:3;background:#f7f1e6}
 table.tgt tfoot .pill{font-weight:700}
+
+/* ---- kolom nomor urut (rank) di tabel target ---- */
+table.tgt th.rk,table.tgt td.rk{width:40px;min-width:40px;max-width:40px;text-align:center;
+  padding-left:4px;padding-right:4px;font-weight:800;color:#57534e}
+table.tgt th.sticky:nth-child(1),table.tgt td.sticky:nth-child(1){left:0}
+table.tgt th.sticky:nth-child(2),table.tgt td.sticky:nth-child(2){left:40px}

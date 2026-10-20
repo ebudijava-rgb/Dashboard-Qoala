@@ -938,13 +938,20 @@ function renderTarget(){
   var tb=$("tgtTable").querySelector("tbody"); tb.innerHTML="";
   var tfEl=$("tgtTable").querySelector("tfoot");
   if(!fr.length){
-    tb.innerHTML='<tr><td colspan="15">Tidak ada store yang cocok.</td></tr>';
+    tb.innerHTML='<tr><td colspan="17">Tidak ada store yang cocok.</td></tr>';
     if(tfEl) tfEl.innerHTML="";
     return;
   }
   var html="";
-  fr.forEach(function(r){
-    html+='<tr><td class="sticky" title="'+esc(r.s)+'">'+esc(r.s)+'</td><td>'+esc(r.pa)+'</td><td>'+esc(r.pr)+'</td><td>'+fmtInt(r.tn)+'</td><td>'+fmtInt(r.an)+'</td><td>'+achCell(r.achN)+'</td><td>'+fmtIDR(r.tg)+'</td><td>'+fmtIDR(r.ag)+'</td><td>'+achCell(r.achG)+'</td><td>'+fmtInt(r.eN)+'</td><td>'+fmtIDR(r.eG)+'</td><td>'+(isFinite(r.estA)?(r.estA*100).toLocaleString("id-ID",{maximumFractionDigits:1})+"%":"—")+'</td><td class="gcell">'+growthCell(r)+'</td><td class="gcell">'+growthCellYoy(r)+'</td><td><span class="pill '+r.st.c+'">'+r.st.t+'</span></td></tr>';
+  var remDays=Math.max(0,dim-elapsed);
+  function dayNeed(tg,ag){
+    if(!(tg>0)||remDays<=0) return NaN;
+    var left=tg-ag;
+    return left>0?left/remDays:0;
+  }
+  fr.forEach(function(r,i){
+    var nd=dayNeed(r.tg,r.ag);
+    html+='<tr><td class="sticky rk">'+(i+1)+'</td><td class="sticky" title="'+esc(r.s)+'">'+esc(r.s)+'</td><td>'+esc(r.pa)+'</td><td>'+esc(r.pr)+'</td><td>'+fmtInt(r.tn)+'</td><td>'+fmtInt(r.an)+'</td><td>'+achCell(r.achN)+'</td><td>'+fmtIDR(r.tg)+'</td><td>'+fmtIDR(r.ag)+'</td><td>'+achCell(r.achG)+'</td><td>'+fmtInt(r.eN)+'</td><td>'+fmtIDR(r.eG)+'</td><td>'+achCell(r.estA)+'</td><td>'+(isFinite(nd)?(nd<=0?'<span class="flat">—</span>':fmtIDR(nd)):'<span class="flat">—</span>')+'</td><td class="gcell">'+growthCell(r)+'</td><td class="gcell">'+growthCellYoy(r)+'</td><td><span class="pill '+r.st.c+'">'+r.st.t+'</span></td></tr>';
   });
   tb.innerHTML=html;
   /* ---- baris TOTAL / grand total dari baris yang sedang tampil ---- */
@@ -960,11 +967,12 @@ function renderTarget(){
   var totRow={gN:pN2>0?(eN2-pN2)/pN2:NaN,pn:pN2,gG:pG2>0?(eG2-pG2)/pG2:NaN,pg:pG2,
               yyN:yN2>0?(eN2-yN2)/yN2:NaN,yn:yN2,yyG:yG2>0?(eG2-yG2)/yG2:NaN,yg:yG2};
   if(!tfEl){ tfEl=document.createElement("tfoot"); $("tgtTable").appendChild(tfEl); }
-  tfEl.innerHTML='<tr class="totrow"><td class="sticky">TOTAL &middot; '+fr.length+' store</td><td></td><td></td>'+
+  tfEl.innerHTML='<tr class="totrow"><td class="sticky rk"></td><td class="sticky">TOTAL &middot; '+fr.length+' store</td><td></td><td></td>'+
     '<td>'+fmtInt(tN2)+'</td><td>'+fmtInt(aN2)+'</td><td>'+achCell(achN2)+'</td>'+
     '<td>'+fmtIDR(tG2)+'</td><td>'+fmtIDR(aG2)+'</td><td>'+achCell(achG2)+'</td>'+
     '<td>'+fmtInt(eN2)+'</td><td>'+fmtIDR(eG2)+'</td>'+
-    '<td>'+(isFinite(est2)?(est2*100).toLocaleString("id-ID",{maximumFractionDigits:1})+"%":"—")+'</td>'+
+    '<td>'+achCell(est2)+'</td>'+
+    '<td>'+((function(){ var n=dayNeed(tG2,aG2); return isFinite(n)?(n<=0?'<span class="flat">—</span>':fmtIDR(n)):'<span class="flat">—</span>'; })())+'</td>'+
     '<td class="gcell">'+growthCell(totRow)+'</td><td class="gcell">'+growthCellYoy(totRow)+'</td>'+
     '<td>'+nDone+' / '+fr.length+' tercapai</td></tr>';
 }
@@ -1207,7 +1215,7 @@ function pageHTML(){
      '<div class="tabs" id="tgtTabs"><button data-t="all" class="on">Semua</button><button data-t="behind">Belum 100%</button><button data-t="done">Tercapai</button></div></div>'+
      '<div class="kpis" id="tgtKpis" style="margin-top:12px"></div>'+
      '<div class="tgt-controls"><input id="tgtSearch" type="search" placeholder="Cari store / PA / promotor…"><span class="muted-sm hide-sm">pencarian berlaku ke seluruh halaman (kartu KPI, tren, blok, tabel)</span><select id="tgtSort"><option value="estHi">Urut: Estimasi % tertinggi</option><option value="tg">Urut: Target GWP terbesar</option><option value="achLo">Urut: Achievement GWP terendah</option><option value="achHi">Urut: Achievement GWP tertinggi</option><option value="gap">Urut: Selisih GWP terbesar</option></select></div>'+
-     '<div class="tbl-wrap tgt-wrap"><table id="tgtTable" class="tgt"><thead><tr><th class="sticky">Store</th><th>PA</th><th>Promotor</th><th>Tgt NoP</th><th>Akt NoP</th><th>Ach NoP</th><th>Tgt GWP</th><th>Akt GWP</th><th>Ach GWP</th><th>Est NoP</th><th>Est GWP</th><th>Est Ach</th><th class="gcol" title="Growth = estimasi akhir bulan (EOM) bulan berjalan vs realisasi '+pmLbl+'">Growth vs '+pmLbl+'</th><th class="gcol" title="YoY = estimasi akhir bulan (EOM) bulan berjalan vs realisasi '+yyLblFull+'">YoY vs '+yyLbl+'</th><th>Status</th></tr></thead><tbody></tbody><tfoot></tfoot></table></div></section>';
+     '<div class="tbl-wrap tgt-wrap"><table id="tgtTable" class="tgt"><thead><tr><th class="sticky rk">No</th><th class="sticky">Store</th><th>PA</th><th>Promotor</th><th>Tgt NoP</th><th>Akt NoP</th><th>Ach NoP</th><th>Tgt GWP</th><th>Akt GWP</th><th>Ach GWP</th><th>Est NoP</th><th>Est GWP</th><th>Est Ach</th><th title="Target harian = sisa target GWP ÷ sisa hari bulan berjalan. GWP yang harus masuk tiap hari agar target store tercapai.">Target/hari</th><th class="gcol" title="Growth = estimasi akhir bulan (EOM) bulan berjalan vs realisasi '+pmLbl+'">Growth vs '+pmLbl+'</th><th class="gcol" title="YoY = estimasi akhir bulan (EOM) bulan berjalan vs realisasi '+yyLblFull+'">YoY vs '+yyLbl+'</th><th>Status</th></tr></thead><tbody></tbody><tfoot></tfoot></table></div></section>';
   if(grid1) h+='<div class="cols2">'+grid1+'</div>';
   if(rest) h+=rest;
   if(ROUTE==="summary"){
