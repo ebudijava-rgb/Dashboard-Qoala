@@ -924,6 +924,7 @@ function renderTarget(){
   var yLbl=ymLabel(tm.month);
   $("tgtNote").textContent="Periode dikunci "+yLbl+" · data per tgl "+elapsed+" "+yLbl.split(" ")[0]+" (pace linear "+(pace*100).toLocaleString("id-ID",{maximumFractionDigits:1})+"%) · estimasi EOM = aktual ×"+(dim/elapsed).toLocaleString("id-ID",{maximumFractionDigits:2})+" · baris & kartu mengikuti filter AM/SPA/PA/Promotor/Store/Partner dari Target.xlsx"+(extraActive?" · aktual juga difilter Produk/Insurance/Status (target tetap level store)":"")+" · MoM = est EOM vs realisasi "+(rd&&rd.prevYm?ymLabel(rd.prevYm):"bulan sebelumnya")+" · YoY = est EOM vs realisasi "+(rd&&rd.yoyYm?ymLabel(rd.yoyYm):"bulan sama tahun lalu")+(SEARCH_Q?(" · pencarian \""+SEARCH_Q+"\""):"")+" · "+rows.length+" store tampil.";
   fr.sort(function(a,b){
+    if(st.sort==="estHi") return (isFinite(b.estA)?b.estA:-1)-(isFinite(a.estA)?a.estA:-1);
     if(st.sort==="achLo") return (isFinite(a.achG)?a.achG:-1)-(isFinite(b.achG)?b.achG:-1);
     if(st.sort==="achHi") return (isFinite(b.achG)?b.achG:-1)-(isFinite(a.achG)?a.achG:-1);
     if(st.sort==="gap") return (b.tg-b.ag)-(a.tg-a.ag);
@@ -935,12 +936,37 @@ function renderTarget(){
     return '<span class="ach"><span class="bar-track"><span class="bar-fill" style="display:block;width:'+p.toFixed(1)+'%"></span></span>'+(v*100).toLocaleString("id-ID",{maximumFractionDigits:1})+'%</span>';
   }
   var tb=$("tgtTable").querySelector("tbody"); tb.innerHTML="";
-  if(!fr.length){ tb.innerHTML='<tr><td colspan="15">Tidak ada store yang cocok.</td></tr>'; return; }
+  var tfEl=$("tgtTable").querySelector("tfoot");
+  if(!fr.length){
+    tb.innerHTML='<tr><td colspan="15">Tidak ada store yang cocok.</td></tr>';
+    if(tfEl) tfEl.innerHTML="";
+    return;
+  }
   var html="";
   fr.forEach(function(r){
     html+='<tr><td class="sticky" title="'+esc(r.s)+'">'+esc(r.s)+'</td><td>'+esc(r.pa)+'</td><td>'+esc(r.pr)+'</td><td>'+fmtInt(r.tn)+'</td><td>'+fmtInt(r.an)+'</td><td>'+achCell(r.achN)+'</td><td>'+fmtIDR(r.tg)+'</td><td>'+fmtIDR(r.ag)+'</td><td>'+achCell(r.achG)+'</td><td>'+fmtInt(r.eN)+'</td><td>'+fmtIDR(r.eG)+'</td><td>'+(isFinite(r.estA)?(r.estA*100).toLocaleString("id-ID",{maximumFractionDigits:1})+"%":"—")+'</td><td class="gcell">'+growthCell(r)+'</td><td class="gcell">'+growthCellYoy(r)+'</td><td><span class="pill '+r.st.c+'">'+r.st.t+'</span></td></tr>';
   });
   tb.innerHTML=html;
+  /* ---- baris TOTAL / grand total dari baris yang sedang tampil ---- */
+  var tN2=0,tG2=0,aN2=0,aG2=0,pN2=0,pG2=0,yN2=0,yG2=0,nDone=0;
+  fr.forEach(function(r){
+    tN2+=r.tn; tG2+=r.tg; aN2+=r.an; aG2+=r.ag;
+    pN2+=r.pn; pG2+=r.pg; yN2+=r.yn; yG2+=r.yg;
+    if(r.st.t==="Tercapai") nDone++;
+  });
+  var eN2=aN2*fac, eG2=aG2*fac;
+  var achN2=tN2>0?aN2/tN2:NaN, achG2=tG2>0?aG2/tG2:NaN;
+  var est2=(tG2>0)?eG2/tG2:(tN2>0?eN2/tN2:NaN);
+  var totRow={gN:pN2>0?(eN2-pN2)/pN2:NaN,pn:pN2,gG:pG2>0?(eG2-pG2)/pG2:NaN,pg:pG2,
+              yyN:yN2>0?(eN2-yN2)/yN2:NaN,yn:yN2,yyG:yG2>0?(eG2-yG2)/yG2:NaN,yg:yG2};
+  if(!tfEl){ tfEl=document.createElement("tfoot"); $("tgtTable").appendChild(tfEl); }
+  tfEl.innerHTML='<tr class="totrow"><td class="sticky">TOTAL &middot; '+fr.length+' store</td><td></td><td></td>'+
+    '<td>'+fmtInt(tN2)+'</td><td>'+fmtInt(aN2)+'</td><td>'+achCell(achN2)+'</td>'+
+    '<td>'+fmtIDR(tG2)+'</td><td>'+fmtIDR(aG2)+'</td><td>'+achCell(achG2)+'</td>'+
+    '<td>'+fmtInt(eN2)+'</td><td>'+fmtIDR(eG2)+'</td>'+
+    '<td>'+(isFinite(est2)?(est2*100).toLocaleString("id-ID",{maximumFractionDigits:1})+"%":"—")+'</td>'+
+    '<td class="gcell">'+growthCell(totRow)+'</td><td class="gcell">'+growthCellYoy(totRow)+'</td>'+
+    '<td>'+nDone+' / '+fr.length+' tercapai</td></tr>';
 }
 
 /* ================= SETTING (khusus Administrator) =================
@@ -1180,8 +1206,8 @@ function pageHTML(){
   h+='<section class="card" id="tgtSec"><div class="card-h row"><div><h2>Target vs Achievement — '+tmLbl+' <span class="muted-sm">data per tgl '+(el0||"—")+'</span></h2><p class="muted" id="tgtNote"></p></div>'+
      '<div class="tabs" id="tgtTabs"><button data-t="all" class="on">Semua</button><button data-t="behind">Belum 100%</button><button data-t="done">Tercapai</button></div></div>'+
      '<div class="kpis" id="tgtKpis" style="margin-top:12px"></div>'+
-     '<div class="tgt-controls"><input id="tgtSearch" type="search" placeholder="Cari store / PA / promotor…"><span class="muted-sm hide-sm">pencarian berlaku ke seluruh halaman (kartu KPI, tren, blok, tabel)</span><select id="tgtSort"><option value="tg">Urut: Target GWP terbesar</option><option value="achLo">Urut: Achievement GWP terendah</option><option value="achHi">Urut: Achievement GWP tertinggi</option><option value="gap">Urut: Selisih GWP terbesar</option></select></div>'+
-     '<div class="tbl-wrap tgt-wrap"><table id="tgtTable" class="tgt"><thead><tr><th class="sticky">Store</th><th>PA</th><th>Promotor</th><th>Tgt NoP</th><th>Akt NoP</th><th>Ach NoP</th><th>Tgt GWP</th><th>Akt GWP</th><th>Ach GWP</th><th>Est NoP</th><th>Est GWP</th><th>Est Ach</th><th class="gcol" title="Growth = estimasi akhir bulan (EOM) bulan berjalan vs realisasi '+pmLbl+'">Growth vs '+pmLbl+'</th><th class="gcol" title="YoY = estimasi akhir bulan (EOM) bulan berjalan vs realisasi '+yyLblFull+'">YoY vs '+yyLbl+'</th><th>Status</th></tr></thead><tbody></tbody></table></div></section>';
+     '<div class="tgt-controls"><input id="tgtSearch" type="search" placeholder="Cari store / PA / promotor…"><span class="muted-sm hide-sm">pencarian berlaku ke seluruh halaman (kartu KPI, tren, blok, tabel)</span><select id="tgtSort"><option value="estHi">Urut: Estimasi % tertinggi</option><option value="tg">Urut: Target GWP terbesar</option><option value="achLo">Urut: Achievement GWP terendah</option><option value="achHi">Urut: Achievement GWP tertinggi</option><option value="gap">Urut: Selisih GWP terbesar</option></select></div>'+
+     '<div class="tbl-wrap tgt-wrap"><table id="tgtTable" class="tgt"><thead><tr><th class="sticky">Store</th><th>PA</th><th>Promotor</th><th>Tgt NoP</th><th>Akt NoP</th><th>Ach NoP</th><th>Tgt GWP</th><th>Akt GWP</th><th>Ach GWP</th><th>Est NoP</th><th>Est GWP</th><th>Est Ach</th><th class="gcol" title="Growth = estimasi akhir bulan (EOM) bulan berjalan vs realisasi '+pmLbl+'">Growth vs '+pmLbl+'</th><th class="gcol" title="YoY = estimasi akhir bulan (EOM) bulan berjalan vs realisasi '+yyLblFull+'">YoY vs '+yyLbl+'</th><th>Status</th></tr></thead><tbody></tbody><tfoot></tfoot></table></div></section>';
   if(grid1) h+='<div class="cols2">'+grid1+'</div>';
   if(rest) h+=rest;
   if(ROUTE==="summary"){

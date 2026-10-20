@@ -308,3 +308,9 @@ table.sec-table tbody td{padding-top:10px;padding-bottom:10px}
   table.sec-table th,table.sec-table td{padding:7px 6px}
   table.sec-table td:first-child .muted-sm{font-size:11px}
 }
+
+/* ---- baris TOTAL tabel target (menempel di bawah saat scroll) ---- */
+table.tgt tfoot td{position:sticky;bottom:0;background:#f7f1e6;color:#3f3a33;font-weight:800;
+  border-top:2px solid var(--line-strong);white-space:nowrap;z-index:2;font-size:12px}
+table.tgt tfoot td.sticky{left:0;z-index:3;background:#f7f1e6}
+table.tgt tfoot .pill{font-weight:700}
