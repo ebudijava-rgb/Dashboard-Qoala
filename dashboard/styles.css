@@ -320,3 +320,19 @@ table.tgt th.rk,table.tgt td.rk{width:40px;min-width:40px;max-width:40px;text-al
   padding-left:4px;padding-right:4px;font-weight:800;color:#57534e}
 table.tgt th.sticky:nth-child(1),table.tgt td.sticky:nth-child(1){left:0}
 table.tgt th.sticky:nth-child(2),table.tgt td.sticky:nth-child(2){left:40px}
+
+/* ---- mode laporan (khusus Administrator): sembunyikan PA, Promotor & kolom NoP ---- */
+#tgtSec.rpt-mode #tgtTable th:nth-child(3),#tgtSec.rpt-mode #tgtTable td:nth-child(3),
+#tgtSec.rpt-mode #tgtTable th:nth-child(4),#tgtSec.rpt-mode #tgtTable td:nth-child(4),
+#tgtSec.rpt-mode #tgtTable th:nth-child(5),#tgtSec.rpt-mode #tgtTable td:nth-child(5),
+#tgtSec.rpt-mode #tgtTable th:nth-child(6),#tgtSec.rpt-mode #tgtTable td:nth-child(6),
+#tgtSec.rpt-mode #tgtTable th:nth-child(7),#tgtSec.rpt-mode #tgtTable td:nth-child(7){display:none}
+#tgtSec.rpt-mode #tgtTable{min-width:0}
+#tgtSec.rpt-mode .tgt-wrap{max-height:none;overflow:visible}
+.btn.ghost.on{background:var(--brand);color:#fff;border-color:var(--brand)}
+/* nama store rata kiri (sejak ada kolom No, kolom store bukan lagi kolom pertama) */
+table.tgt th.sticky,table.tgt td.sticky{text-align:left}
+table.tgt th.sticky.rk,table.tgt td.sticky.rk{text-align:center}
+
+/* di mode laporan tabel tampil penuh (tanpa scroll internal) -> matikan sticky agar urutan baris normal */
+#tgtSec.rpt-mode #tgtTable th,#tgtSec.rpt-mode #tgtTable td{position:static}

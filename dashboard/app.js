@@ -47,6 +47,10 @@ var TGT = {summary:{q:"",sort:"tg",tab:"all"},spa:{q:"",sort:"tg",tab:"all"},pa:
    Haystack per-store dibangun sekali setiap kata kunci berubah supaya passFact
    (dipanggil 148 ribu kali per render) tetap cepat. */
 var SEARCH_Q="", SEARCH_HAY=null, SEARCH_READY=false, searchTimer=null;
+/* Mode laporan (khusus Administrator): sembunyikan kolom PA, Promotor & kolom NoP,
+   tampilkan semua baris tabel supaya mudah di-screenshot. Default mati. */
+var RPT=false;
+function isAdminUser(){ return !!(USER && roleKind(USER.r)==="admin"); }
 function searchPrep(){
   var q=norm((TGT[ROUTE]&&TGT[ROUTE].q)||"");
   if(SEARCH_READY && q===SEARCH_Q) return;
@@ -871,6 +875,10 @@ function growthCellYoy(r){
 }
 function renderTarget(){
   if(!$("tgtTable")||!DATA.target||!DATA.target.length||!DATA.targetMeta) return;
+  var _sec=$("tgtSec");
+  if(_sec) _sec.classList.toggle("rpt-mode",!!RPT);
+  var _rb=$("tgtRpt");
+  if(_rb){ _rb.classList.toggle("on",!!RPT); _rb.setAttribute("aria-pressed",RPT?"true":"false"); _rb.textContent=RPT?"Mode laporan: AKTIF":"Mode laporan"; }
   var st=TGT[ROUTE];
   var tm=DATA.targetMeta;
   var rd=targetRowData();
@@ -1211,10 +1219,12 @@ function pageHTML(){
   var yyLbl=yyM?ymLabel(yyM).slice(0,3):"thn lalu";
   var yyLblFull=yyM?ymLabel(yyM):"bulan yang sama tahun lalu";
   var el0=elapsedOf();
+  var rptBtn=isAdminUser()?'<button id="tgtRpt" class="btn ghost sm" type="button" aria-pressed="false" title="Mode laporan: sembunyikan kolom PA, Promotor, dan NoP + tampilkan semua baris supaya mudah di-screenshot">Mode laporan</button>':'';
   h+='<section class="card" id="tgtSec"><div class="card-h row"><div><h2>Target vs Achievement — '+tmLbl+' <span class="muted-sm">data per tgl '+(el0||"—")+'</span></h2><p class="muted" id="tgtNote"></p></div>'+
      '<div class="tabs" id="tgtTabs"><button data-t="all" class="on">Semua</button><button data-t="behind">Belum 100%</button><button data-t="done">Tercapai</button></div></div>'+
      '<div class="kpis" id="tgtKpis" style="margin-top:12px"></div>'+
-     '<div class="tgt-controls"><input id="tgtSearch" type="search" placeholder="Cari store / PA / promotor…"><span class="muted-sm hide-sm">pencarian berlaku ke seluruh halaman (kartu KPI, tren, blok, tabel)</span><select id="tgtSort"><option value="estHi">Urut: Estimasi % tertinggi</option><option value="tg">Urut: Target GWP terbesar</option><option value="achLo">Urut: Achievement GWP terendah</option><option value="achHi">Urut: Achievement GWP tertinggi</option><option value="gap">Urut: Selisih GWP terbesar</option></select></div>'+
+     '<div class="tgt-controls"><input id="tgtSearch" type="search" placeholder="Cari store / PA / promotor…"><span class="muted-sm hide-sm">pencarian berlaku ke seluruh halaman (kartu KPI, tren, blok, tabel)</span><select id="tgtSort"><option value="estHi">Urut: Estimasi % tertinggi</option><option value="tg">Urut: Target GWP terbesar</option><option value="achLo">Urut: Achievement GWP terendah</option><option value="achHi">Urut: Achievement GWP tertinggi</option><option value="gap">Urut: Selisih GWP terbesar</option></select>'+
+          rptBtn+'</div>'+
      '<div class="tbl-wrap tgt-wrap"><table id="tgtTable" class="tgt"><thead><tr><th class="sticky rk">No</th><th class="sticky">Store</th><th>PA</th><th>Promotor</th><th>Tgt NoP</th><th>Akt NoP</th><th>Ach NoP</th><th>Tgt GWP</th><th>Akt GWP</th><th>Ach GWP</th><th>Est NoP</th><th>Est GWP</th><th>Est Ach</th><th title="Target harian = sisa target GWP ÷ sisa hari bulan berjalan. GWP yang harus masuk tiap hari agar target store tercapai.">Target/hari</th><th class="gcol" title="Growth = estimasi akhir bulan (EOM) bulan berjalan vs realisasi '+pmLbl+'">Growth vs '+pmLbl+'</th><th class="gcol" title="YoY = estimasi akhir bulan (EOM) bulan berjalan vs realisasi '+yyLblFull+'">YoY vs '+yyLbl+'</th><th>Status</th></tr></thead><tbody></tbody><tfoot></tfoot></table></div></section>';
   if(grid1) h+='<div class="cols2">'+grid1+'</div>';
   if(rest) h+=rest;
@@ -1264,6 +1274,8 @@ function bindPage(){
     ts.addEventListener("keydown",function(e){ if(e.key==="Enter"){ e.preventDefault(); goSearch(); } });
   }
   if(so){ so.value=st.sort; so.addEventListener("change",function(e){ st.sort=e.target.value; renderTarget(); }); }
+  var rp=$("tgtRpt");
+  if(rp) rp.addEventListener("click",function(){ RPT=!RPT; renderTarget(); });
   if(tt) tt.querySelectorAll("button").forEach(function(b){
     if(b.dataset.t===st.tab){ tt.querySelectorAll("button").forEach(function(x){x.classList.remove("on");}); b.classList.add("on"); }
     b.addEventListener("click",function(){
