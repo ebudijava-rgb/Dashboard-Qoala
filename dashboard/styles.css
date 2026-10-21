@@ -1,4 +1,4 @@
-:root{
+﻿:root{
   --bg:#f7f4ee; --card:#fff; --ink:#292524; --muted:#78716c;
   --line:#e9e5dd; --line-strong:#ded8cc; --navy:#12294b;
   --brand:#d97706; --brand-dark:#b45309; --accent:#1d4ed8;
@@ -372,7 +372,7 @@ body.shot-mode .topbar .greet,body.shot-mode .topbar .eyebrow,body.shot-mode .to
 body.shot-mode .topbar{padding:10px 0 8px}
 body.shot-mode .topbar h1{font-size:16px;margin:0}
 body.shot-mode .top-actions,body.shot-mode .filters,body.shot-mode .foot,body.shot-mode #pageHead,body.shot-mode #warnBar{display:none}
-body.shot-mode #pageBody > *:not(#tgtSec){display:none}
+body.shot-mode #pageBody > *:not(#tgtSec):not(.shot-exit){display:none}
 #tgtSec.shot-mode #tgtTabs,#tgtSec.shot-mode #tgtKpis,#tgtSec.shot-mode .tgt-controls,#tgtSec.shot-mode .card-h p.muted{display:none}
 #tgtSec.shot-mode .card-h{padding-bottom:4px}
 #tgtSec.shot-mode .shot-cap{display:block}
@@ -389,4 +389,11 @@ body.shot-mode #pageBody > *:not(#tgtSec){display:none}
 #tgtSec.shot-mode table.tgt th,#tgtSec.shot-mode table.tgt td{padding:2px 8px}
 #tgtSec.shot-mode .card-h h2{font-size:15px}
 #tgtSec.shot-mode .shot-cap{margin:0 0 6px;font-size:11.5px}
-body.shot-mode{overflow:hidden}
+
+/* ---- tombol keluar Mode screenshot (mengambang, memudar otomatis) ---- */
+.shot-exit{display:none}
+body.shot-mode .shot-exit{display:inline-flex;align-items:center;gap:6px;position:fixed;top:10px;right:12px;z-index:80;
+  background:#1c1917;color:#fff;border:0;border-radius:999px;padding:8px 14px;font:inherit;font-size:12.5px;font-weight:800;
+  cursor:pointer;box-shadow:0 6px 18px rgba(0,0,0,.25);transition:opacity .3s}
+body.shot-mode .shot-exit.dim{opacity:0;pointer-events:none}
+body.shot-mode #side,body.shot-mode .scrim{display:none}
