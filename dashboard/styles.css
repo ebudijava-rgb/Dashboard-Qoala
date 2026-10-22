@@ -1,6 +1,6 @@
 ﻿:root{
   --bg:#f7f4ee; --card:#fff; --ink:#292524; --muted:#78716c;
-  --line:#e9e5dd; --line-strong:#ded8cc; --navy:#12294b;
+  --line:#ddd6c9; --line-strong:#c6beae; --navy:#12294b;
   --brand:#d97706; --brand-dark:#b45309; --accent:#1d4ed8;
   --rose:#dc2626; --shadow:0 10px 30px rgba(41,37,36,.07);
   --r:16px;
@@ -99,9 +99,9 @@ select{background:#faf9f6;border:1px solid var(--line);border-radius:10px;paddin
 .ach-list::-webkit-scrollbar-track{background:transparent}
 .tbl-wrap{overflow-x:auto;overscroll-behavior-x:contain;-webkit-overflow-scrolling:touch}
 table{width:100%;border-collapse:collapse;font-size:13px}
-th,td{text-align:right;padding:9px 10px;border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums}
+th,td{text-align:right;padding:9px 10px;border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums;font-weight:600}
 th:first-child,td:first-child{text-align:left}
-thead th{background:#faf9f6;font-size:11.5px;text-transform:uppercase;letter-spacing:.05em;color:#57534e}
+thead th{background:#faf9f6;font-size:11.5px;text-transform:uppercase;letter-spacing:.05em;color:#57534e;font-weight:800}
 .foot{color:var(--muted);font-size:12px;padding:10px 2px 20px}
 .tgt-controls{display:flex;gap:10px;flex-wrap:wrap;margin:12px 0}
 .tgt-controls input[type=search]{flex:2;min-width:200px;background:#faf9f6;border:1px solid var(--line);border-radius:10px;padding:9px 12px;font-size:13px}
@@ -310,9 +310,9 @@ table.sec-table tbody td{padding-top:10px;padding-bottom:10px}
 }
 
 /* ---- baris TOTAL tabel target (menempel di bawah saat scroll) ---- */
-table.tgt tfoot td{position:sticky;bottom:0;background:#f7f1e6;color:#3f3a33;font-weight:800;
-  border-top:2px solid var(--line-strong);white-space:nowrap;z-index:2;font-size:12px}
-table.tgt tfoot td.sticky{left:0;z-index:3;background:#f7f1e6}
+table.tgt tfoot td{position:sticky;bottom:0;background:#ece3cf;color:#3b352c;font-weight:800;
+  border-top:2px solid #b9ad96;white-space:nowrap;z-index:2;font-size:12px}
+table.tgt tfoot td.sticky{left:0;z-index:3;background:#ece3cf}
 table.tgt tfoot .pill{font-weight:700}
 
 /* ---- kolom nomor urut (rank) di tabel target ---- */
@@ -320,6 +320,20 @@ table.tgt th.rk,table.tgt td.rk{width:40px;min-width:40px;max-width:40px;text-al
   padding-left:4px;padding-right:4px;font-weight:800;color:#57534e}
 table.tgt th.sticky:nth-child(1),table.tgt td.sticky:nth-child(1){left:0}
 table.tgt th.sticky:nth-child(2),table.tgt td.sticky:nth-child(2){left:40px}
+
+/* ---- keterbacaan tabel target: huruf lebih tebal, garis tegas, baris selang-seling ---- */
+table.tgt td{font-weight:600}
+table.tgt tbody td{padding-top:8px;padding-bottom:8px;border-bottom:1px solid #e2dbcd}
+table.tgt thead th{border-bottom:2px solid #0b1c33;letter-spacing:.06em}
+table.tgt tbody tr{background:#fff}
+table.tgt tbody tr:nth-child(even){background:#f1eee6}
+table.tgt tbody tr td.sticky{background:#fff}
+table.tgt tbody tr:nth-child(even) td.sticky{background:#f1eee6}
+table.tgt tbody tr:hover{background:#fdf1de}
+table.tgt tbody tr:hover td.sticky{background:#fdf1de}
+table.tgt .ach .bar-track{background:#e2d8c6}
+/* sel tabel target tidak dibungkus -> tinggi baris seragam, pola selang-seling rapi */
+table.tgt tbody td{white-space:nowrap}
 
 /* ---- mode laporan (khusus Administrator): sembunyikan PA, Promotor & kolom NoP ---- */
 #tgtSec.rpt-mode #tgtTable th:nth-child(3),#tgtSec.rpt-mode #tgtTable td:nth-child(3),
