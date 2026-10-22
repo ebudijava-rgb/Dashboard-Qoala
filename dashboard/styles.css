@@ -183,6 +183,17 @@ table.sc tbody th{font-weight:800;color:var(--ink)}
 .login-card label{display:flex;flex-direction:column;gap:6px;font-size:12.5px;font-weight:700;color:#44403c}
 .login-card input{border:1px solid var(--line);border-radius:10px;padding:11px 12px;font-size:14px;font-family:inherit;background:#faf9f6;color:var(--ink)}
 .login-card input:focus{outline:2px solid #fbe0b4;border-color:var(--brand);background:#fff}
+/* ---- tombol lihat/sembunyikan kata sandi ---- */
+.pw-wrap{position:relative;display:block}
+.pw-wrap input{width:100%;padding-right:44px}
+.pw-eye{position:absolute;right:5px;top:50%;transform:translateY(-50%);border:0;background:transparent;color:#8a8175;
+  padding:7px;border-radius:8px;cursor:pointer;line-height:0;display:flex;align-items:center;justify-content:center}
+.pw-eye:hover{background:#f2ece1;color:var(--brand-dark)}
+.pw-eye:focus-visible{outline:2px solid #fbe0b4;outline-offset:1px}
+.pw-eye svg{width:18px;height:18px;display:block}
+.pw-eye .eye-off{display:none}
+.pw-eye.on .eye-off{display:block}
+.pw-eye.on .eye-on{display:none}
 .login-err{display:none;background:#ffe4e6;color:#be123c;border-radius:10px;padding:9px 12px;font-size:12.5px;font-weight:700}
 .login-err.on{display:block}
 .btn.login-btn{width:100%;background:var(--brand);color:#fffbf0;padding:12px;font-size:14px;border-radius:10px}

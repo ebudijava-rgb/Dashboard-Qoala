@@ -1674,7 +1674,8 @@ function enter(u,persist){
   if(persist||!sessCurrentId()) sessStart(u); else sessTouch();
   var lg=$("login"); if(lg) lg.hidden=true;
   var le=$("loginErr"); if(le){ le.textContent=""; le.classList.remove("on"); }
-  var lp=$("loginPass"); if(lp) lp.value="";
+  var lp=$("loginPass"); if(lp){ lp.value=""; lp.type="password"; }
+  var pt=$("pwToggle"); if(pt){ pt.classList.remove("on"); pt.setAttribute("aria-pressed","false"); pt.title="Tampilkan kata sandi"; pt.setAttribute("aria-label",pt.title); }
   document.body.classList.remove("locked");
   startDashboard();
 }
@@ -1698,6 +1699,16 @@ function doLogout(){
   window.location.reload();
 }
 var _lf=$("loginForm"); if(_lf) _lf.addEventListener("submit",function(e){ e.preventDefault(); doLogin(); });
+var _pt=$("pwToggle"); if(_pt) _pt.addEventListener("click",function(){
+  var p=$("loginPass"); if(!p) return;
+  var show=p.type==="password";
+  p.type=show?"text":"password";
+  _pt.classList.toggle("on",show);
+  _pt.setAttribute("aria-pressed",show?"true":"false");
+  _pt.title=show?"Sembunyikan kata sandi":"Tampilkan kata sandi";
+  _pt.setAttribute("aria-label",_pt.title);
+  p.focus();
+});
 var _lo=$("btnLogout"); if(_lo) _lo.addEventListener("click",doLogout);
 
 function init(){

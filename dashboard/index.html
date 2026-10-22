@@ -97,10 +97,18 @@
     <h2>Qoala Gadget Protection x MAP Tech</h2>
     <p class="muted">Masuk untuk melihat dashboard</p>
     <label>Email<input id="loginUser" type="text" placeholder="nama@qoala.id" autocomplete="username" spellcheck="false"></label>
-    <label>Password<input id="loginPass" type="password" placeholder="password" autocomplete="current-password"></label>
+    <label>Password
+      <span class="pw-wrap">
+        <input id="loginPass" type="password" placeholder="password" autocomplete="current-password">
+        <button type="button" id="pwToggle" class="pw-eye" aria-label="Tampilkan kata sandi" title="Tampilkan kata sandi" aria-pressed="false">
+          <svg class="eye-on" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>
+          <svg class="eye-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3l18 18"/><path d="M10.6 5.2A11 11 0 0 1 12 5c6.4 0 10 7 10 7a17.6 17.6 0 0 1-3.2 4.2"/><path d="M6.2 6.8A17.7 17.7 0 0 0 2 12s3.6 7 10 7c1.7 0 3.2-.4 4.5-1"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/></svg>
+        </button>
+      </span>
+    </label>
     <div class="login-err" id="loginErr" role="alert"></div>
     <button class="btn primary login-btn" id="loginBtn" type="submit">Masuk</button>
-    <p class="login-foot">Administrator melihat semua data · Partnership Associate melihat seluruh data SPA-nya · Promotor melihat seluruh data PA-nya. Administrator dapat mengubah kata sandi lewat menu <b>Setting › Account</b>.</p>
+    <p class="login-foot">for internal use only</p>
   </form>
 </div>
 
