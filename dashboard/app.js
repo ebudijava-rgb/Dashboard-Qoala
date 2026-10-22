@@ -1576,6 +1576,21 @@ function parentName(kind, idx){
   }
   return best;
 }
+/* ---- nama dari Target.xlsx tetap dikenali walau promotor/PA belum punya transaksi ----
+   Ditambahkan di belakang supaya indeks dimensi yang dipakai facts tidak bergeser. */
+function mergeTargetDims(){
+  var t=(DATA&&DATA.target)||[]; if(!t.length) return;
+  [["prom","pr"],["pa","pa"],["spa","spa"],["am","am"]].forEach(function(m){
+    var key=m[0], col=m[1], arr=DATA[key]||[], seen={};
+    arr.forEach(function(v){ var k=norm(clean(v||"")); if(k) seen[k]=1; });
+    t.forEach(function(row){
+      var v=clean((row&&row[col])||""); if(!v) return;
+      var k=norm(v); if(seen[k]) return;
+      seen[k]=1; arr.push(v);
+    });
+    DATA[key]=arr;
+  });
+}
 function roleKind(r){
   r=norm(r||"");
   if(!r) return "admin";   /* akun tanpa role = perilaku lama (akses semua) */
@@ -1687,6 +1702,7 @@ var _lo=$("btnLogout"); if(_lo) _lo.addEventListener("click",doLogout);
 
 function init(){
   if(!DATA){ document.body.innerHTML="<p style='padding:24px'>data/summary.js tidak ditemukan. Buka via folder dashboard/ atau jalankan tools/aggregate.ps1.</p>"; return; }
+  mergeTargetDims();
   if(!(DATA.users&&DATA.users.length)){ enter(null,false); return; }
   var saved=null; try{ saved=sessionStorage.getItem("qoala.session"); }catch(e){}
   var u=saved?findUser(saved):null;
