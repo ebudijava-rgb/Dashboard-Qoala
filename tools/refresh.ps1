@@ -19,7 +19,7 @@ if (-not (Test-Path $script:git)) { $script:git = "git" }
 $script:agg = Join-Path $script:root "tools\aggregate.ps1"
 $script:jj  = Join-Path $script:root "dashboard\data\summary.json"
 $script:jss = Join-Path $script:root "dashboard\data\summary.js"
-$script:url = "https://gpp-map.vercel.app/"
+$script:url = "https://qgp-map.vercel.app/"
 
 function Say($msg, $color) { if ($color) { Write-Host $msg -ForegroundColor $color } else { Write-Host $msg } }
 function ReadText($p) {
