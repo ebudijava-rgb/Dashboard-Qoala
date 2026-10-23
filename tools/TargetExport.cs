@@ -78,8 +78,7 @@ public static class TargetExport
                 double tn=0,tg=0,d;
                 if(r.ContainsKey("H")&&double.TryParse(r["H"],System.Globalization.NumberStyles.Any,System.Globalization.CultureInfo.InvariantCulture,out d)) tn=d;
                 if(r.ContainsKey("I")&&double.TryParse(r["I"],System.Globalization.NumberStyles.Any,System.Globalization.CultureInfo.InvariantCulture,out d)) tg=d;
-                // Kolom J = "Up Target GWP" (mis. Area Yudistira): bila terisi, dipakai sebagai target GWP resmi menggantikan kolom I.
-                if(r.ContainsKey("J")&&double.TryParse(r["J"],System.Globalization.NumberStyles.Any,System.Globalization.CultureInfo.InvariantCulture,out d)&&d>0) tg=d;
+                // Kolom J ("Up Target GWP") sengaja tidak dipakai: semua area memakai target normal di kolom I.
                 if(!first) w.Write(",");
                 first=false; n++;
                 w.Write("{\"s\":\""+Esc(store)+"\"");
