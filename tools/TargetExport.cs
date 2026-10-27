@@ -75,10 +75,12 @@ public static class TargetExport
                 string spa=S(r.ContainsKey("E")?r["E"]:"").Trim();
                 string pa=S(r.ContainsKey("F")?r["F"]:"").Trim();
                 string prom=S(r.ContainsKey("G")?r["G"]:"").Trim();
-                double tn=0,tg=0,d;
+                double tn=0,tg=0,tu=0,d;
                 if(r.ContainsKey("H")&&double.TryParse(r["H"],System.Globalization.NumberStyles.Any,System.Globalization.CultureInfo.InvariantCulture,out d)) tn=d;
                 if(r.ContainsKey("I")&&double.TryParse(r["I"],System.Globalization.NumberStyles.Any,System.Globalization.CultureInfo.InvariantCulture,out d)) tg=d;
-                // Kolom J ("Up Target GWP") sengaja tidak dipakai: semua area memakai target normal di kolom I.
+                // Kolom J = "Up Target GWP" (hanya terisi untuk area tertentu, mis. Yudistira).
+                // Dipakai saat halaman SPA memilih mode "Target Up"; 0 = store tidak punya target up.
+                if(r.ContainsKey("J")&&double.TryParse(r["J"],System.Globalization.NumberStyles.Any,System.Globalization.CultureInfo.InvariantCulture,out d)) tu=d;
                 if(!first) w.Write(",");
                 first=false; n++;
                 w.Write("{\"s\":\""+Esc(store)+"\"");
@@ -89,6 +91,7 @@ public static class TargetExport
                 w.Write(",\"pr\":\""+Esc(prom)+"\"");
                 w.Write(",\"tn\":"+tn.ToString(System.Globalization.CultureInfo.InvariantCulture));
                 w.Write(",\"tg\":"+tg.ToString(System.Globalization.CultureInfo.InvariantCulture));
+                w.Write(",\"tu\":"+tu.ToString(System.Globalization.CultureInfo.InvariantCulture));
                 w.Write("}");
             }
             w.Write("]");
