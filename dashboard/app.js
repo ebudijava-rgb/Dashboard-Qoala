@@ -1379,6 +1379,8 @@ function renderSetting(){
 var CAMP = {bu:"ALL", q:"", sort:"score", tab:"all"};
 /* Mode screenshot campaign: 75 store ditata 3 kolom × 25 baris supaya muat 1 layar. */
 var CAMP_SHOT = false;
+/* Mode screenshot per kartu (leaderboard / grand prize): isi kartu di-clone ke overlay. */
+var CAMP_SHOT_CARD = false;
 var CAMP_VOUCHER = {
   store:[{r:1,n:1,v:10000000},{r:2,n:1,v:9000000},{r:3,n:1,v:8000000},{r:4,n:2,v:6000000},{r:5,n:3,v:5000000},{r:6,n:7,v:4000000},{r:7,n:60,v:2500000}],
   am:[{r:1,n:1,v:10000000},{r:2,n:1,v:8500000},{r:3,n:1,v:6500000},{r:4,n:3,v:4500000},{r:5,n:5,v:3500000},{r:6,n:7,v:2000000}],
@@ -1533,9 +1535,13 @@ function campaignHTML(){
         '<p class="muted" id="cTopNote" style="margin:0 0 8px"></p>'+
         '<div class="tbl-wrap"><table id="cTopTable" class="tgt camp-tbl"><thead><tr><th class="sticky rk">Rank</th><th class="sticky">Store</th><th>RH</th><th>AM</th><th>SPA</th><th>PA</th><th>Target Sep–Des</th><th>GWP MTD</th><th>Ach %</th></tr></thead><tbody></tbody><tfoot></tfoot></table></div>'+
       '</div></section>'+
-    '<div class="cols2"><section class="card"><h2>Leaderboard by Area Manager</h2><div id="cAm"></div></section>'+
-      '<section class="card"><h2>Leaderboard by Store &amp; Regional Head</h2><div id="cSpa"></div></section></div>'+
-    '<section class="card"><h2>Grand Prize (Trip To Korea Selatan) 25 Pemenang</h2><div id="cGrand" class="grand-grid"></div></section>'+
+    '<div class="cols2">'+
+      '<section class="card"><div class="card-h row"><div><h2>Leaderboard by Area Manager</h2></div><button class="btn ghost sm cshot-btn" type="button" data-shot="cAm" title="Tampilkan leaderboard ini dalam satu layar untuk di-screenshot">Mode screenshot</button></div><div id="cAm"></div></section>'+
+      '<section class="card"><div class="card-h row"><div><h2>Leaderboard by PA</h2></div><button class="btn ghost sm cshot-btn" type="button" data-shot="cPa" title="Tampilkan leaderboard ini dalam satu layar untuk di-screenshot">Mode screenshot</button></div><div id="cPa"></div></section>'+
+    '</div>'+
+    '<section class="card"><div class="card-h row"><div><h2>Leaderboard by Store &amp; Regional Head</h2></div><button class="btn ghost sm cshot-btn" type="button" data-shot="cSpa" title="Tampilkan leaderboard ini dalam satu layar untuk di-screenshot">Mode screenshot</button></div><div id="cSpa"></div></section>'+
+    '<section class="card"><div class="card-h row"><div><h2>Grand Prize (Trip To Korea Selatan) 25 Pemenang By Achievement &amp; Growth</h2></div><button class="btn ghost sm cshot-btn" type="button" data-shot="cGrand" title="Tampilkan grand prize ini dalam satu layar untuk di-screenshot">Mode screenshot</button></div><div id="cGrand" class="grand-grid"></div></section>'+
+    '<section class="card"><div class="card-h row"><div><h2>Grand Prize (Trip To Korea Selatan) 25 Pemenang by Achievement%</h2></div><button class="btn ghost sm cshot-btn" type="button" data-shot="cGrandAch" title="Tampilkan grand prize ini dalam satu layar untuk di-screenshot">Mode screenshot</button></div><div id="cGrandAch" class="grand-grid"></div></section>'+
     '<section class="card"><h2>T&amp;C <span class="muted-sm">QOALA Program Reward 2026</span></h2><ul id="cTc" class="trend-list"></ul></section>'+
     '<div id="cShot" class="cshot" hidden></div>'+
     '<button id="cShotExit" class="cshot-exit" type="button" title="Keluar dari mode screenshot (Esc)">&times; Keluar mode screenshot</button>';
@@ -1545,9 +1551,15 @@ function campJt(n){
   if(n==null||isNaN(n)) return "0";
   return (n/1e6).toLocaleString("id-ID",{maximumFractionDigits:1});
 }
+function campDataDate(){
+  return (DATA.targetMeta&&DATA.targetMeta.month)?((elapsedOf()?elapsedOf()+" ":"")+ymLabel(DATA.targetMeta.month)):"—";
+}
+function campShotMeta(dataDate){
+  return '<div class="cshot-meta"><b>Qoala Gadget Protection x MAP Tech</b><br>Target: Target-Campaign-2026.xlsx · Data: Data-raw.xlsx<br>Data per-tanggal : '+esc(dataDate||"—")+'</div>';
+}
 function campShotHTML(rows,title,sub,tgtLabel,cols,dataDate,showElig){
   var n=rows.length;
-  var meta='<div class="cshot-meta"><b>Qoala Gadget Protection x MAP Tech</b><br>Target: Target-Campaign-2026.xlsx · Data: Data-raw.xlsx<br>Data per-tanggal : '+esc(dataDate||"—")+'</div>';
+  var meta=campShotMeta(dataDate);
   if(!n) return '<div class="cshot-head"><div><div class="cshot-title">'+esc(title)+'</div><div class="cshot-sub">'+esc(sub)+'</div></div>'+meta+'</div>'+
     '<p class="muted" style="margin:10px 2px">Tidak ada store yang cocok.</p>';
   var maxByW=Math.max(1,Math.floor((window.innerWidth-64)/300));
@@ -1597,8 +1609,27 @@ function campShotArm(){
   if(campTimer){ clearTimeout(campTimer); campTimer=null; }
   campTimer=setTimeout(function(){ if(CAMP_SHOT){ var x=$("cShotExit"); if(x) x.classList.add("dim"); } },2600);
 }
+/* Mode screenshot per kartu: clone isi kartu (leaderboard / grand prize) ke overlay #cShot. */
+function campCardShot(el){
+  if(!el) return;
+  var card=el.closest?el.closest(".card"):null;
+  var h2=card?card.querySelector("h2"):null;
+  var note=card?card.querySelector(".card-h p.muted"):null;
+  var title=(h2?h2.innerText:"").replace(/\s+/g," ").trim()||"Leaderboard";
+  var box=$("cShot"); if(!box) return;
+  var clone=el.cloneNode(true); clone.removeAttribute("id");
+  CAMP_SHOT=true; CAMP_SHOT_CARD=true;
+  document.body.classList.add("camp-shot");
+  window.scrollTo(0,0);
+  box.hidden=false;
+  box.innerHTML='<div class="cshot-head"><div><div class="cshot-title">'+esc(title)+'</div>'+
+      (note?'<div class="cshot-sub">'+esc(note.innerText)+'</div>':'')+'</div>'+campShotMeta(campDataDate())+'</div>'+
+    '<div class="cshot-card">'+clone.outerHTML+'</div>';
+  campShotFit();
+  campShotArm();
+}
 function campShotOff(){
-  CAMP_SHOT=false;
+  CAMP_SHOT=false; CAMP_SHOT_CARD=false;
   document.body.classList.remove("camp-shot");
   if(campTimer){ clearTimeout(campTimer); campTimer=null; }
   var b=$("cShot"); if(b){ b.style.zoom=""; b.hidden=true; b.innerHTML=""; }
@@ -1726,7 +1757,7 @@ function renderCampaign(){
     sb.textContent=CAMP_SHOT?"Mode screenshot: AKTIF":"Mode screenshot";
     sb.onclick=function(){
       if(CAMP_SHOT){ campShotOff(); return; }
-      CAMP_SHOT=true;
+      CAMP_SHOT=true; CAMP_SHOT_CARD=false;
       document.body.classList.add("camp-shot");
       window.scrollTo(0,0);
       renderCampaign();
@@ -1735,9 +1766,9 @@ function renderCampaign(){
   var ex=$("cShotExit");
   if(ex) ex.onclick=function(){ campShotOff(); };
   var shot=$("cShot");
-  if(shot){
+  if(shot && !CAMP_SHOT_CARD){
     if(CAMP_SHOT && (topBu||shotBu)){
-      var dataDate=(DATA.targetMeta&&DATA.targetMeta.month)?((elapsedOf()?elapsedOf()+" ":"")+ymLabel(DATA.targetMeta.month)):lastLive;
+      var dataDate=campDataDate();
       var shotRows,shotTitle,shotSub,shotTgtLabel,shotCols,showElig=false;
       if(topBu){
         shotRows=topList.map(function(o,i){ return {o:o,rk:i+1,tgt:o.tgt4,p:o.achAll}; });
@@ -1768,6 +1799,13 @@ function renderCampaign(){
       '<span class="muted-sm">'+(tier?fmtIDR(tier.v):'—')+'</span></div>';
   }).join("");
   if($("cAm")) $("cAm").innerHTML=amHTML+'<p class="muted-sm" style="margin-top:8px">Skor AM = agregat achievement &amp; growth seluruh store campaign di bawahnya.</p>';
+  /* ---- PA ---- */
+  var pas=campGroup(R,"pa");
+  var paHTML=pas.slice(0,18).map(function(g,i){
+    return '<div class="bar-row"><span class="n">'+(i+1)+'. '+esc(g.k)+' <span class="muted-sm">'+g.n+' store</span></span><span class="v">'+fmtPctPlain(g.ach)+' · '+fmtPct(g.growth)+'</span>'+
+      '<div class="bar-track"><div class="bar-fill" style="width:'+Math.max(2,Math.min(100,g.score*100)).toFixed(1)+'%"></div></div></div>';
+  }).join("");
+  if($("cPa")) $("cPa").innerHTML=paHTML+'<p class="muted-sm" style="margin-top:8px">Skor PA = agregat achievement &amp; growth seluruh store campaign di bawahnya.</p>';
   /* ---- Best SPV (per BU, berbasis store) + Best RH (kolom RH) ---- */
   var spvHTML="";
   ["Digiplus","Digimap"].forEach(function(bu){
@@ -1792,9 +1830,24 @@ function renderCampaign(){
   });
   grand.push({t:"Best RH (2)",items:rhs.slice(0,2).map(function(x,i){return (i+1)+". "+x.k;})});
   grand.push({t:"HO (3)",items:["Belum tersedia di data"]});
-  if($("cGrand")) $("cGrand").innerHTML=grand.map(function(g){
+  var grandHTML=function(list){ return list.map(function(g){
     return '<div class="grand-card"><div class="gc-t">'+esc(g.t)+'</div><ol>'+g.items.map(function(s,i){return '<li>'+esc(s)+'</li>';}).join("")+'</ol></div>';
-  }).join("");
+  }).join(""); };
+  if($("cGrand")) $("cGrand").innerHTML=grandHTML(grand);
+  /* ---- grand prize by Achievement% (target vs aktual saja, tanpa growth) ---- */
+  var grandAch=[];
+  ["Digiplus","Digimap"].forEach(function(bu){
+    var spv=R.filter(function(o){return o.bu===bu && o.eligible;}).sort(function(a,b){return b.ach-a.ach;}).slice(0,7);
+    grandAch.push({t:"Best SPV "+bu+" (7)",items:spv.map(function(o,i){return (i+1)+". "+o.t.s;} )});
+  });
+  ["Digiplus","Digimap"].forEach(function(bu){
+    var am=campGroup(R.filter(function(o){return o.bu===bu;}),"am").sort(function(a,b){return b.ach-a.ach;}).slice(0,3);
+    grandAch.push({t:"Best AM "+bu+" (3)",items:am.map(function(x,i){return (i+1)+". "+x.k;} )});
+  });
+  var rhsAch=campGroup(R,"rh").sort(function(a,b){return b.ach-a.ach;}).slice(0,2);
+  grandAch.push({t:"Best RH (2)",items:rhsAch.map(function(x,i){return (i+1)+". "+x.k;})});
+  grandAch.push({t:"HO (3)",items:["Belum tersedia di data"]});
+  if($("cGrandAch")) $("cGrandAch").innerHTML=grandHTML(grandAch);
   /* ---- T&C ---- */
   if($("cTc")) $("cTc").innerHTML=[
     "Periode program <b>September–Desember 2026</b>; berlaku untuk store dengan penjualan minimal <b>90% dari target</b>.",
@@ -1803,7 +1856,7 @@ function renderCampaign(){
     "Voucher store per BU: Rp 10 jt (1), Rp 9 jt (1), Rp 8 jt (1), Rp 6 jt (2), Rp 5 jt (3), Rp 4 jt (7), Rp 2,5 jt (60) → total 75 pemenang per BU.",
     "Voucher AM: Rp 10 jt (1), Rp 8,5 jt (1), Rp 6,5 jt (1), Rp 4,5 jt (3), Rp 3,5 jt (5), Rp 2 jt (7) → 18 pemenang.",
     "Voucher RH: Rp 8 jt (1), Rp 5,5 jt (2), Rp 4 jt (2) → 5 pemenang.",
-    "Grand Prize: trip Korea Selatan (± April 2027) untuk <b>25 pemenang</b>: Best SPV Digimap 7, Best SPV Digiplus 7, Best AM Digimap 3, Best AM Digiplus 3, Best RH 2, HO 3."
+    "Grand Prize: trip Korea Selatan (± April 2027) untuk <b>25 pemenang</b>: Best SPV Digimap 7, Best SPV Digiplus 7, Best AM Digimap 3, Best AM Digiplus 3, Best RH 2, HO 3. Dua simulasi: <b>By Achievement &amp; Growth</b> (skor 50/50) dan <b>by Achievement%</b> (target vs aktual saja)."
   ].map(function(s){return "<li>"+s+"</li>";}).join("");
   /* ---- binding ---- */
   var cs=$("cSearch");
@@ -1830,6 +1883,9 @@ function renderCampaign(){
     }).join("\n");
     dlFile("campaign-2026-"+new Date().toISOString().slice(0,10)+".csv",head+lines,"text/csv;charset=utf-8");
   };
+  [].slice.call(document.querySelectorAll(".cshot-btn")).forEach(function(b){
+    b.onclick=function(){ campCardShot($(b.dataset.shot)); };
+  });
 }
 
 /* ---- halaman ---- */
@@ -1999,7 +2055,7 @@ function renderRoute(){
   bindPage();
   /* pindah halaman = kembali ke tampilan normal (mode laporan/screenshot tidak ikut pindah) */
   SHOT=false; RPT=false; document.body.classList.remove("shot-mode");
-  CAMP_SHOT=false; document.body.classList.remove("camp-shot");
+  CAMP_SHOT=false; CAMP_SHOT_CARD=false; document.body.classList.remove("camp-shot");
   var isSet=(ROUTE==="account"||ROUTE==="keamanan");
   document.body.classList.toggle("settings-mode",isSet);
   document.body.classList.toggle("campaign-mode",ROUTE==="campaign");

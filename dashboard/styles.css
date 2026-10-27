@@ -496,6 +496,13 @@ body.camp-shot #pageBody > *:not(#cShot):not(#cShotExit){display:none}
 .cshot-tbl tbody tr:nth-child(even){background:#f7f4ee}
 .cshot-tbl td.r{color:var(--muted);font-weight:800}
 .cshot-tbl td.s{text-align:left;font-weight:700}
+/* mode screenshot per kartu (leaderboard / grand prize) */
+.cshot-btn{white-space:nowrap}
+.cshot-card .sub-head:first-child{margin-top:0}
+.cshot-card .sub-head{margin:12px 0 4px}
+.cshot-card .bar-row{font-size:13.5px;margin:7px 0}
+.cshot-card .grand-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+.cshot-card .grand-card ol{font-size:13.5px}
 .cshot-tbl td.s.ok{box-shadow:inset 3px 0 0 #15803d}
 .cshot-legend{display:inline-flex;align-items:center;gap:6px;color:#15803d}
 .cshot-legend i{display:inline-block;width:4px;height:12px;background:#15803d;border-radius:2px;vertical-align:-2px}

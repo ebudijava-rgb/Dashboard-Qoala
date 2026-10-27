@@ -77,10 +77,15 @@ Growth kosong (`—`) bila baseline Mei–Agu = 0 (store baru).
    Tab tambahan **"75 store Digiplus by %"** dan **"75 store Digimap by %"**: peringkat 1–75
    per BU berdasarkan **% target akumulasi Sep–Des vs GWP MTD** (tanpa growth, status, skor).
 4. **Leaderboard by Area Manager** - 18 posisi voucher, agregat store di bawah AM.
-5. **Leaderboard by Store & Regional Head** - Best SPV per BU ditampilkan sebagai **nama store** (7 store),
+5. **Leaderboard by PA** - agregat store di bawah tiap PA, urut skor (ach + growth).
+6. **Leaderboard by Store & Regional Head** - Best SPV per BU ditampilkan sebagai **nama store** (7 store),
    Best RH memakai **kolom RH** (5 voucher).
-6. **Grand Prize (Trip To Korea Selatan) 25 Pemenang** - simulasi 25 pemenang per kategori.
-7. **Ringkasan T&C**.
+7. **Grand Prize (Trip To Korea Selatan) 25 Pemenang By Achievement & Growth** - simulasi 25 pemenang
+   per kategori memakai skor (50% achievement + 50% growth).
+8. **Grand Prize (Trip To Korea Selatan) 25 Pemenang by Achievement%** - simulasi yang sama, tetapi
+   peringkat hanya dari **achievement (target vs aktual)**, tanpa growth.
+9. **Ringkasan T&C**. Setiap kartu leaderboard/grand prize punya tombol **Mode screenshot** sendiri
+   (isi kartu di-clone ke satu layar penuh, auto-zoom, keluar dengan Esc).
 
 Halaman ini **tidak memakai filter global** (tahun/bulan/produk/store) karena definisi
 campaign sudah tetap (Sep–Des 2026); pembatasan akses (lock PA/Promotor) tetap berlaku.
