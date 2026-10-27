@@ -435,3 +435,10 @@ table.tgt td .bar-row.mini .v{font-weight:800;color:#44403c}
 .grand-card ol{margin:0;padding-left:18px;font-size:12.5px;line-height:1.6}
 .grand-card li{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 @media (max-width:900px){.grand-grid{grid-template-columns:1fr}}
+/* tabel campaign: semua sel rata tengah + warna header seragam */
+table.tgt.camp-tbl th,table.tgt.camp-tbl td{text-align:center}
+table.tgt.camp-tbl th.sticky,table.tgt.camp-tbl td.sticky{text-align:center}
+table.tgt.camp-tbl thead th.rk{color:#fff}
+table.tgt.camp-tbl td .bar-row.mini{grid-template-columns:1fr;justify-items:center;gap:3px;min-width:112px}
+table.tgt.camp-tbl td .bar-row.mini .bar-track{width:100%}
+.grand-card{background:#fffdfa}
