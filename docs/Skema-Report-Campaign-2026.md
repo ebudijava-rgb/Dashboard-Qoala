@@ -69,17 +69,17 @@ Growth kosong (`—`) bila baseline Mei–Agu = 0 (store baru).
 
 1. **KPI** — target campaign, realisasi s/d bulan berjalan, achievement, growth vs Mei–Agu,
    store memenuhi syarat, nilai voucher simulasi.
-2. **Progres per bulan** — tabel Sep/Oct/Nov/Des: target, aktual, ach, polis, bar progres.
+2. **Progress Campaign September - December 2026** - tabel Sep/Oct/Nov/Des: target, aktual, ach, polis, bar progres.
    Bulan yang belum berjalan hanya menampilkan target.
-3. **Leaderboard store** — filter BU, pencarian, urut (skor/ach/growth/aktual/target),
+3. **Leaderboard by Store** - filter BU, pencarian, urut (skor/ach/growth/aktual/target),
    tab semua/layak/belum; kolom: Rank (nomor urut 1,2,3...; store layak di atas), Store, BU, RH, AM, SPA, PA, target, aktual,
    ach, polis, growth, skor, status, voucher. Ada baris TOTAL + unduh CSV.
    Tab tambahan **"75 store Digiplus by %"** dan **"75 store Digimap by %"**: peringkat 1–75
    per BU berdasarkan **% target akumulasi Sep–Des vs GWP MTD** (tanpa growth, status, skor).
-4. **Leaderboard AM** — 18 posisi voucher, agregat store di bawah AM.
-5. **Leaderboard SPV & RH** — Best SPV per BU ditampilkan sebagai **nama store** (7 store),
+4. **Leaderboard by Area Manager** - 18 posisi voucher, agregat store di bawah AM.
+5. **Leaderboard by Store & Regional Head** - Best SPV per BU ditampilkan sebagai **nama store** (7 store),
    Best RH memakai **kolom RH** (5 voucher).
-6. **Grand prize** — simulasi 25 pemenang per kategori.
+6. **Grand Prize (Trip To Korea Selatan) 25 Pemenang** - simulasi 25 pemenang per kategori.
 7. **Ringkasan T&C**.
 
 Halaman ini **tidak memakai filter global** (tahun/bulan/produk/store) karena definisi
