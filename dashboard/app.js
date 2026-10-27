@@ -1518,7 +1518,7 @@ function campaignHTML(){
     '<div class="cols2"><section class="card"><h2>Leaderboard by Area Manager</h2><div id="cAm"></div></section>'+
       '<section class="card"><h2>Leaderboard by Store &amp; Regional Head</h2><div id="cSpa"></div></section></div>'+
     '<section class="card"><h2>Grand Prize (Trip To Korea Selatan) 25 Pemenang</h2><div id="cGrand" class="grand-grid"></div></section>'+
-    '<section class="card"><h2>Syarat &amp; ketentuan ringkas <span class="muted-sm">QOALA Program Reward 2026</span></h2><ul id="cTc" class="trend-list"></ul></section>'+
+    '<section class="card"><h2>T&amp;C <span class="muted-sm">QOALA Program Reward 2026</span></h2><ul id="cTc" class="trend-list"></ul></section>'+
     '<div id="cShot" class="cshot" hidden></div>'+
     '<button id="cShotExit" class="cshot-exit" type="button" title="Keluar dari mode screenshot (Esc)">&times; Keluar mode screenshot</button>';
 }
