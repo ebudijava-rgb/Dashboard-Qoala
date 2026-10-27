@@ -1527,7 +1527,7 @@ function campJt(n){
   if(n==null||isNaN(n)) return "0";
   return (n/1e6).toLocaleString("id-ID",{maximumFractionDigits:1});
 }
-function campShotHTML(list,bu,lastLive,gen){
+function campShotHTML(list,bu,lastLive,dataDate){
   var cols=[[],[],[]];
   list.forEach(function(o,i){ cols[Math.min(2,Math.floor(i/25))].push({o:o,rk:i+1}); });
   var blocks=cols.map(function(c,ci){
@@ -1541,13 +1541,13 @@ function campShotHTML(list,bu,lastLive,gen){
     }).join("");
     return '<div class="cshot-col"><div class="cshot-col-h">Peringkat '+from+'–'+to+'</div>'+
       '<table class="cshot-tbl"><colgroup><col class="c-r"><col><col class="c-m"><col class="c-m"><col class="c-a"></colgroup>'+
-      '<thead><tr><th>#</th><th class="s">Store</th><th class="m">Target Sep–Des</th><th class="m">GWP MTD</th><th class="m">Ach</th></tr></thead>'+
+      '<thead><tr><th>Rank</th><th class="s">Store</th><th class="m">Target Sep–Des</th><th class="m">GWP MTD</th><th class="m">Ach</th></tr></thead>'+
       '<tbody>'+rows+'</tbody></table></div>';
   }).join("");
   var tt=list.reduce(function(a,o){return a+o.tgt4;},0), ta=list.reduce(function(a,o){return a+o.act;},0);
   return '<div class="cshot-head"><div><div class="cshot-title">75 store '+esc(bu)+' by %</div>'+
       '<div class="cshot-sub">Peringkat berdasarkan % target akumulasi Sep–Des 2026 vs GWP MTD (s/d '+esc(lastLive)+') · nilai target &amp; GWP dalam Rp juta</div></div>'+
-      '<div class="cshot-meta"><b>Qoala Gadget Protection x MAP Tech</b><br>Target: Target-Campaign-2026.xlsx · Data: Data-raw.xlsx<br>Dibuat '+esc(gen||"—")+'</div></div>'+
+      '<div class="cshot-meta"><b>Qoala Gadget Protection x MAP Tech</b><br>Target: Target-Campaign-2026.xlsx · Data: Data-raw.xlsx<br>Data per-tanggal : '+esc(dataDate||"—")+'</div></div>'+
     '<div class="cshot-grid">'+blocks+'</div>'+
     '<div class="cshot-foot"><span>TOTAL '+list.length+' store</span><span>Target Sep–Des '+fmtIDR(tt)+'</span><span>GWP MTD '+fmtIDR(ta)+'</span><span>Ach '+fmtPct0(tt>0?ta/tt:0)+'</span></div>';
 }
@@ -1633,20 +1633,26 @@ function renderCampaign(){
     act:function(a,b){return b.act-a.act;},
     tgt:function(a,b){return b.tgt4-a.tgt4;}
   }[CAMP.sort]||function(a,b){return b.score-a.score;};
-  f.sort(sortFn);
-  /* peringkat & voucher per BU dihitung dari seluruh store BU tsb (bukan hasil filter) */
-  var rankMap={}, voucherMap={}, voucherTotal=0;
+  /* store yang punya peringkat (memenuhi syarat) selalu di atas; sisanya di bawah */
+  f.sort(function(a,b){
+    if(!!a.eligible!==!!b.eligible) return a.eligible?-1:1;
+    return sortFn(a,b);
+  });
+  /* voucher per BU dihitung dari seluruh store BU tsb (bukan hasil filter) */
+  var voucherMap={}, voucherTotal=0;
   ["Digiplus","Digimap"].forEach(function(bu){
     var pool=D.rows.filter(function(o){return o.bu===bu && o.eligible;}).sort(function(a,b){return b.score-a.score;});
     pool.forEach(function(o,i){
       var pos=i+1, tier=campTier(CAMP_VOUCHER.store,pos);
-      rankMap[o.t.s]=pos;
       if(tier){ voucherMap[o.t.s]=tier; voucherTotal+=tier.v; }
     });
   });
   if($("cVoucher")) $("cVoucher").textContent=fmtIDR(voucherTotal);
+  /* nomor urut tampil: 1,2,3,... untuk store yang memenuhi syarat */
+  var dispRank={}, rkN=0;
+  f.forEach(function(o){ if(o.eligible) dispRank[o.t.s]=++rkN; });
   var body=f.map(function(o){
-    var rk=rankMap[o.t.s];
+    var rk=dispRank[o.t.s];
     var v=voucherMap[o.t.s];
     return '<tr'+(o.eligible?'':' class="dim"')+'><td class="sticky rk">'+(rk?fmtInt(rk):'—')+'</td>'+
       '<td class="sticky"><b>'+esc(o.t.s)+'</b></td><td>'+esc(o.bu)+'</td><td>'+esc(clean(o.t.rh))+'</td><td>'+esc(clean(o.t.am))+'</td><td>'+esc(clean(o.t.spa))+'</td><td>'+esc(clean(o.t.pa))+'</td>'+
@@ -1662,7 +1668,7 @@ function renderCampaign(){
     var polS=f.reduce(function(a,o){return a+o.pol;},0);
     $("cTable").querySelector("tfoot").innerHTML='<tr><td class="sticky rk"></td><td class="sticky"><b>TOTAL · '+f.length+' store</b></td><td></td><td></td><td></td><td></td><td></td><td>'+fmtIDR(f.reduce(function(a,o){return a+o.tgt4;},0))+'</td><td>'+fmtIDR(tgtS)+'</td><td>'+fmtIDR(actS)+'</td><td>'+fmtPctPlain(tgtS>0?actS/tgtS:0)+'</td><td>'+fmtInt(polS)+'</td><td></td><td></td><td>'+f.filter(function(o){return o.eligible;}).length+' layak</td><td>'+fmtIDR(f.reduce(function(a,o){var v=voucherMap[o.t.s];return a+(v?v.v:0);},0))+'</td></tr>';
   }
-  if($("cNote")) $("cNote").textContent="Peringkat dihitung per BU dari store yang memenuhi syarat (ach ≥ 90% + minimum polis/revenue). Skor = 50% achievement + 50% growth. Voucher = simulasi posisi saat ini.";
+  if($("cNote")) $("cNote").textContent="Peringkat 1,2,3,… hanya untuk store yang memenuhi syarat (ach ≥ 90% + minimum polis/revenue); store yang belum memenuhi syarat diletakkan di bawah. Skor = 50% achievement + 50% growth. Voucher = simulasi posisi per BU.";
   /* ---- mode "75 store by %": Target akumulasi Sep–Des vs GWP MTD (tanpa growth/status/skor) ---- */
   var topBu=(CAMP.bu==="Digiplus75")?"Digiplus":((CAMP.bu==="Digimap75")?"Digimap":null);
   var topList=topBu?R.filter(function(o){ return o.bu===topBu; }).sort(function(a,b){ return b.achAll-a.achAll; }).slice(0,75):[];
@@ -1701,8 +1707,9 @@ function renderCampaign(){
   var shot=$("cShot");
   if(shot){
     if(CAMP_SHOT && topBu){
+      var dataDate=(DATA.targetMeta&&DATA.targetMeta.month)?((elapsedOf()?elapsedOf()+" ":"")+ymLabel(DATA.targetMeta.month)):lastLive;
       shot.hidden=false;
-      shot.innerHTML=campShotHTML(topList,topBu,lastLive,DATA.meta&&DATA.meta.generated);
+      shot.innerHTML=campShotHTML(topList,topBu,lastLive,dataDate);
       campShotFit();
       campShotArm();
     }else{
@@ -1775,7 +1782,7 @@ function renderCampaign(){
     var head="rank,store,bu,rh,am,spa,pa,target_sep_des,target_sd_bulan,aktual_sd_bulan,ach_pct,polis,growth_pct,skor,layak,voucher\n";
     var lines=f.map(function(o){
       var v=voucherMap[o.t.s];
-      return [rankMap[o.t.s]||"",o.t.s,o.bu,o.t.rh||"",o.t.am||"",o.t.spa||"",o.t.pa||"",Math.round(o.tgt4),Math.round(o.tgtE),Math.round(o.act),
+      return [dispRank[o.t.s]||"",o.t.s,o.bu,o.t.rh||"",o.t.am||"",o.t.spa||"",o.t.pa||"",Math.round(o.tgt4),Math.round(o.tgtE),Math.round(o.act),
         (o.ach*100).toFixed(1),o.pol,(o.growth==null?"":(o.growth*100).toFixed(1)),(o.score*100).toFixed(1),(o.eligible?"ya":"belum"),v?v.v:""]
         .map(function(x){ return '"'+String(x).replace(/"/g,'""')+'"'; }).join(",");
     }).join("\n");

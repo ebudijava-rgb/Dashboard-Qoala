@@ -72,7 +72,7 @@ Growth kosong (`—`) bila baseline Mei–Agu = 0 (store baru).
 2. **Progres per bulan** — tabel Sep/Oct/Nov/Des: target, aktual, ach, polis, bar progres.
    Bulan yang belum berjalan hanya menampilkan target.
 3. **Leaderboard store** — filter BU, pencarian, urut (skor/ach/growth/aktual/target),
-   tab semua/layak/belum; kolom: Rank (per BU), Store, BU, RH, AM, SPA, PA, target, aktual,
+   tab semua/layak/belum; kolom: Rank (urut 1,2,3...; store yang belum memenuhi syarat di bawah), Store, BU, RH, AM, SPA, PA, target, aktual,
    ach, polis, growth, skor, status, voucher. Ada baris TOTAL + unduh CSV.
    Tab tambahan **"75 store Digiplus by %"** dan **"75 store Digimap by %"**: peringkat 1–75
    per BU berdasarkan **% target akumulasi Sep–Des vs GWP MTD** (tanpa growth, status, skor).
