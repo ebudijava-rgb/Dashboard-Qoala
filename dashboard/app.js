@@ -1618,13 +1618,14 @@ function campCardShot(el){
   var title=(h2?h2.innerText:"").replace(/\s+/g," ").trim()||"Leaderboard";
   var box=$("cShot"); if(!box) return;
   var clone=el.cloneNode(true); clone.removeAttribute("id");
+  clone.className=(clone.className+" cshot-card shot-"+el.id).trim();
   CAMP_SHOT=true; CAMP_SHOT_CARD=true;
   document.body.classList.add("camp-shot");
   window.scrollTo(0,0);
   box.hidden=false;
   box.innerHTML='<div class="cshot-head"><div><div class="cshot-title">'+esc(title)+'</div>'+
       (note?'<div class="cshot-sub">'+esc(note.innerText)+'</div>':'')+'</div>'+campShotMeta(campDataDate())+'</div>'+
-    '<div class="cshot-card">'+clone.outerHTML+'</div>';
+    clone.outerHTML;
   campShotFit();
   campShotArm();
 }
@@ -1810,12 +1811,13 @@ function renderCampaign(){
   var spvHTML="";
   ["Digiplus","Digimap"].forEach(function(bu){
     var g=R.filter(function(o){return o.bu===bu && o.eligible;}).sort(function(a,b){return b.score-a.score;}).slice(0,7);
-    spvHTML+='<h3 class="sub-head">Best SPV '+bu+' <span class="muted-sm">7 store · grand prize</span></h3>';
+    spvHTML+='<div class="spv-sec"><h3 class="sub-head">Best SPV '+bu+' <span class="muted-sm">7 store · grand prize</span></h3>';
     spvHTML+=g.map(function(o,i){ return '<div class="bar-row"><span class="n">'+(i+1)+'. '+esc(o.t.s)+'</span><span class="v">'+fmtPctPlain(o.ach)+' · '+fmtPct(o.growth)+'</span><div class="bar-track"><div class="bar-fill" style="width:'+Math.max(2,Math.min(100,o.score*100)).toFixed(1)+'%"></div></div></div>'; }).join("")||'<p class="muted-sm">Belum ada store yang memenuhi syarat.</p>';
+    spvHTML+='</div>';
   });
   var rhs=campGroup(R,"rh");
-  spvHTML+='<h3 class="sub-head">Best RH <span class="muted-sm">5 voucher · grand prize 2</span></h3>'+
-    rhs.slice(0,5).map(function(x,i){ var tier=campTier(CAMP_VOUCHER.rh,i+1); return '<div class="bar-row"><span class="n">'+(i+1)+'. '+esc(x.k)+' <span class="muted-sm">'+x.n+' store</span></span><span class="v">'+fmtPctPlain(x.ach)+'</span><div class="bar-track"><div class="bar-fill" style="width:'+Math.max(2,Math.min(100,x.score*100)).toFixed(1)+'%"></div></div><span class="muted-sm">'+(tier?fmtIDR(tier.v):'—')+'</span></div>'; }).join("")+
+  spvHTML+='<div class="spv-sec"><h3 class="sub-head">Best RH <span class="muted-sm">5 voucher · grand prize 2</span></h3>'+
+    rhs.slice(0,5).map(function(x,i){ var tier=campTier(CAMP_VOUCHER.rh,i+1); return '<div class="bar-row"><span class="n">'+(i+1)+'. '+esc(x.k)+' <span class="muted-sm">'+x.n+' store</span></span><span class="v">'+fmtPctPlain(x.ach)+'</span><div class="bar-track"><div class="bar-fill" style="width:'+Math.max(2,Math.min(100,x.score*100)).toFixed(1)+'%"></div></div><span class="muted-sm">'+(tier?fmtIDR(tier.v):'—')+'</span></div>'; }).join("")+'</div>'+
     '<p class="muted-sm" style="margin-top:8px">Best SPV = peringkat <b>store</b> per BU (7 store). Best RH = agregat store per RH (kolom RH di Target-Campaign-2026). Kategori HO belum tersedia di data.</p>';
   if($("cSpa")) $("cSpa").innerHTML=spvHTML;
   /* ---- grand prize ---- */
