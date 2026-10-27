@@ -1496,16 +1496,20 @@ function campaignHTML(){
   return '<section class="kpis" id="cKpis"></section>'+
     '<section class="card"><div class="card-h row"><div><h2>Progres campaign per bulan <span class="muted-sm">Sep–Des 2026</span></h2><p class="muted" id="cMonthNote"></p></div></div>'+
       '<div class="tbl-wrap"><table id="cMonthTable" class="tgt"><thead><tr><th>Bulan</th><th>Tgt GWP</th><th>Akt GWP</th><th>Ach</th><th>Polis</th><th>Progres</th></tr></thead><tbody></tbody><tfoot></tfoot></table></div></section>'+
-    '<section class="card" id="cLeadCard"><div class="card-h row"><div><h2>Leaderboard store — voucher MAP</h2><p class="muted" id="cNote"></p></div>'+
+    '<section class="card" id="cLeadCard"><div class="card-h row"><div><h2 id="cLeadTitle">Leaderboard store — voucher MAP</h2><p class="muted" id="cNote"></p></div>'+
       '<div class="tabs" id="cBuTabs"><button data-b="ALL" class="on">Semua</button><button data-b="Digiplus">Digiplus</button><button data-b="Digimap">Digimap</button><button data-b="Digiplus75">75 store Digiplus by %</button><button data-b="Digimap75">75 store Digimap by %</button></div></div>'+
-      '<div class="kpis" id="cBuKpis" style="margin-top:12px"></div>'+
-      '<div class="tgt-controls"><input id="cSearch" type="search" placeholder="Cari store / PA / AM / SPA…">'+
-        '<select id="cSort"><option value="score">Urut: Skor (Ach+Growth)</option><option value="ach">Urut: Achievement</option><option value="growth">Urut: Growth</option><option value="act">Urut: Aktual GWP</option><option value="tgt">Urut: Target terbesar</option></select>'+
-        '<div class="tabs" id="cTabTabs"><button data-t="all" class="on">Semua</button><button data-t="ok">Memenuhi syarat</button><button data-t="no">Belum memenuhi</button></div>'+
-        '<button class="btn ghost sm" id="cCsv" type="button">Unduh CSV</button></div>'+
-      '<div class="tbl-wrap"><table id="cTable" class="tgt camp-tbl"><thead><tr><th class="rk">Rank</th><th class="sticky">Store</th><th>BU</th><th>RH</th><th>AM</th><th>SPA</th><th>PA</th><th>Target Sep–Des</th><th>Target s/d bln ini</th><th>GWP Campaign</th><th>Ach</th><th>Policy Campaign</th><th>Growth vs Mei–Agu</th><th>Skor</th><th>Status</th><th>Voucher</th></tr></thead><tbody></tbody><tfoot></tfoot></table></div></section>'+
-    '<section class="card" id="cTopCard" style="display:none"><div class="card-h row"><div><h2 id="cTopTitle">75 store by %</h2><p class="muted" id="cTopNote"></p></div></div>'+
-      '<div class="tbl-wrap"><table id="cTopTable" class="tgt camp-tbl"><thead><tr><th class="rk">Rank</th><th class="sticky">Store</th><th>RH</th><th>AM</th><th>SPA</th><th>PA</th><th>Target Sep–Des</th><th>GWP MTD</th><th>Ach %</th></tr></thead><tbody></tbody><tfoot></tfoot></table></div></section>'+
+      '<div id="cLeadBody">'+
+        '<div class="kpis" id="cBuKpis" style="margin-top:12px"></div>'+
+        '<div class="tgt-controls"><input id="cSearch" type="search" placeholder="Cari store / PA / AM / SPA…">'+
+          '<select id="cSort"><option value="score">Urut: Skor (Ach+Growth)</option><option value="ach">Urut: Achievement</option><option value="growth">Urut: Growth</option><option value="act">Urut: Aktual GWP</option><option value="tgt">Urut: Target terbesar</option></select>'+
+          '<div class="tabs" id="cTabTabs"><button data-t="all" class="on">Semua</button><button data-t="ok">Memenuhi syarat</button><button data-t="no">Belum memenuhi</button></div>'+
+          '<button class="btn ghost sm" id="cCsv" type="button">Unduh CSV</button></div>'+
+        '<div class="tbl-wrap"><table id="cTable" class="tgt camp-tbl"><thead><tr><th class="rk">Rank</th><th class="sticky">Store</th><th>BU</th><th>RH</th><th>AM</th><th>SPA</th><th>PA</th><th>Target Sep–Des</th><th>Target s/d bln ini</th><th>GWP Campaign</th><th>Ach</th><th>Policy Campaign</th><th>Growth vs Mei–Agu</th><th>Skor</th><th>Status</th><th>Voucher</th></tr></thead><tbody></tbody><tfoot></tfoot></table></div>'+
+      '</div>'+
+      '<div id="cTopBody" style="display:none">'+
+        '<p class="muted" id="cTopNote" style="margin:0 0 8px"></p>'+
+        '<div class="tbl-wrap"><table id="cTopTable" class="tgt camp-tbl"><thead><tr><th class="rk">Rank</th><th class="sticky">Store</th><th>RH</th><th>AM</th><th>SPA</th><th>PA</th><th>Target Sep–Des</th><th>GWP MTD</th><th>Ach %</th></tr></thead><tbody></tbody><tfoot></tfoot></table></div>'+
+      '</div></section>'+
     '<div class="cols2"><section class="card"><h2>Leaderboard AM <span class="muted-sm">voucher MAP · 18 pemenang</span></h2><div id="cAm"></div></section>'+
       '<section class="card"><h2>Leaderboard SPV &amp; RH <span class="muted-sm">best SPV per BU · best RH</span></h2><div id="cSpa"></div></section></div>'+
     '<section class="card"><h2>Grand Prize — Trip Korea Selatan <span class="muted-sm">simulasi 25 pemenang</span></h2><div id="cGrand" class="grand-grid"></div></section>'+
@@ -1599,12 +1603,12 @@ function renderCampaign(){
   if($("cNote")) $("cNote").textContent="Peringkat dihitung per BU dari store yang memenuhi syarat (ach ≥ 90% + minimum polis/revenue). Skor = 50% achievement + 50% growth. Voucher = simulasi posisi saat ini.";
   /* ---- mode "75 store by %": Target akumulasi Sep–Des vs GWP MTD (tanpa growth/status/skor) ---- */
   var topBu=(CAMP.bu==="Digiplus75")?"Digiplus":((CAMP.bu==="Digimap75")?"Digimap":null);
-  var leadCard=$("cLeadCard"), topCard=$("cTopCard");
-  if(leadCard) leadCard.style.display=topBu?"none":"";
-  if(topCard) topCard.style.display=topBu?"":"none";
+  if($("cLeadBody")) $("cLeadBody").style.display=topBu?"none":"";
+  if($("cTopBody")) $("cTopBody").style.display=topBu?"":"none";
+  if($("cLeadTitle")) $("cLeadTitle").innerHTML=topBu?("75 store "+topBu+" by %"):"Leaderboard store — voucher MAP";
+  if($("cNote")) $("cNote").style.display=topBu?"none":"";
   if(topBu && $("cTopTable")){
     var list=R.filter(function(o){ return o.bu===topBu; }).sort(function(a,b){ return b.achAll-a.achAll; }).slice(0,75);
-    if($("cTopTitle")) $("cTopTitle").innerHTML="75 store "+topBu+" by %";
     if($("cTopNote")) $("cTopNote").textContent="Peringkat berdasarkan % target akumulasi Sep–Des vs GWP MTD (s/d "+lastLive+"). Tanpa growth, status, dan skor.";
     var tb=list.map(function(o,i){
       return '<tr><td class="rk">'+(i+1)+'</td><td><b>'+esc(o.t.s)+'</b></td><td>'+esc(clean(o.t.rh))+'</td><td>'+esc(clean(o.t.am))+'</td><td>'+esc(clean(o.t.spa))+'</td><td>'+esc(clean(o.t.pa))+'</td>'+
