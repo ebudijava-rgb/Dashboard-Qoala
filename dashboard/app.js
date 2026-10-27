@@ -1357,6 +1357,8 @@ function renderSetting(){
    Growth : rata-rata GWP/bulan Sep–Des vs rata-rata Mei–Agu.
    Syarat T&C: capaian ≥90% target + minimum polis & revenue per BU. */
 var CAMP = {bu:"ALL", q:"", sort:"score", tab:"all"};
+/* Mode screenshot campaign: 75 store ditata 3 kolom × 25 baris supaya muat 1 layar. */
+var CAMP_SHOT = false;
 var CAMP_VOUCHER = {
   store:[{r:1,n:1,v:10000000},{r:2,n:1,v:9000000},{r:3,n:1,v:8000000},{r:4,n:2,v:6000000},{r:5,n:3,v:5000000},{r:6,n:7,v:4000000},{r:7,n:60,v:2500000}],
   am:[{r:1,n:1,v:10000000},{r:2,n:1,v:8500000},{r:3,n:1,v:6500000},{r:4,n:3,v:4500000},{r:5,n:5,v:3500000},{r:6,n:7,v:2000000}],
@@ -1497,7 +1499,8 @@ function campaignHTML(){
     '<section class="card"><div class="card-h row"><div><h2>Progres campaign per bulan <span class="muted-sm">Sep–Des 2026</span></h2><p class="muted" id="cMonthNote"></p></div></div>'+
       '<div class="tbl-wrap"><table id="cMonthTable" class="tgt"><thead><tr><th>Bulan</th><th>Tgt GWP</th><th>Akt GWP</th><th>Ach</th><th>Polis</th><th>Progres</th></tr></thead><tbody></tbody><tfoot></tfoot></table></div></section>'+
     '<section class="card" id="cLeadCard"><div class="card-h row"><div><h2 id="cLeadTitle">Leaderboard store — voucher MAP</h2><p class="muted" id="cNote"></p></div>'+
-      '<div class="tabs" id="cBuTabs"><button data-b="ALL" class="on">Semua</button><button data-b="Digiplus">Digiplus</button><button data-b="Digimap">Digimap</button><button data-b="Digiplus75">75 store Digiplus by %</button><button data-b="Digimap75">75 store Digimap by %</button></div></div>'+
+      '<div class="camp-h-right"><div class="tabs" id="cBuTabs"><button data-b="ALL" class="on">Semua</button><button data-b="Digiplus">Digiplus</button><button data-b="Digimap">Digimap</button><button data-b="Digiplus75">75 store Digiplus by %</button><button data-b="Digimap75">75 store Digimap by %</button></div>'+
+      '<button class="btn ghost sm" id="cShotBtn" type="button" style="display:none" title="Tampilkan 75 store dalam 3 kolom (25 store per kolom) supaya semuanya muat dalam satu tangkapan layar">Mode screenshot</button></div></div>'+
       '<div id="cLeadBody">'+
         '<div class="kpis" id="cBuKpis" style="margin-top:12px"></div>'+
         '<div class="tgt-controls"><input id="cSearch" type="search" placeholder="Cari store / PA / AM / SPA…">'+
@@ -1513,7 +1516,64 @@ function campaignHTML(){
     '<div class="cols2"><section class="card"><h2>Leaderboard AM <span class="muted-sm">voucher MAP · 18 pemenang</span></h2><div id="cAm"></div></section>'+
       '<section class="card"><h2>Leaderboard SPV &amp; RH <span class="muted-sm">best SPV per BU · best RH</span></h2><div id="cSpa"></div></section></div>'+
     '<section class="card"><h2>Grand Prize — Trip Korea Selatan <span class="muted-sm">simulasi 25 pemenang</span></h2><div id="cGrand" class="grand-grid"></div></section>'+
-    '<section class="card"><h2>Syarat &amp; ketentuan ringkas <span class="muted-sm">QOALA Program Reward 2026</span></h2><ul id="cTc" class="trend-list"></ul></section>';
+    '<section class="card"><h2>Syarat &amp; ketentuan ringkas <span class="muted-sm">QOALA Program Reward 2026</span></h2><ul id="cTc" class="trend-list"></ul></section>'+
+    '<div id="cShot" class="cshot" hidden></div>'+
+    '<button id="cShotExit" class="cshot-exit" type="button" title="Keluar dari mode screenshot (Esc)">&times; Keluar mode screenshot</button>';
+}
+/* ---- Mode screenshot campaign: 75 store dibagi 3 kolom (25 baris per kolom) ---- */
+function campJt(n){
+  if(n==null||isNaN(n)) return "0";
+  return (n/1e6).toLocaleString("id-ID",{maximumFractionDigits:1});
+}
+function campShotHTML(list,bu,lastLive,gen){
+  var cols=[[],[],[]];
+  list.forEach(function(o,i){ cols[Math.min(2,Math.floor(i/25))].push({o:o,rk:i+1}); });
+  var blocks=cols.map(function(c,ci){
+    var from=ci*25+1, to=from+Math.max(c.length,1)-1;
+    var rows=c.map(function(x){
+      var o=x.o, p=o.achAll;
+      var col=(p>=1)?"#15803d":((p>=0.9)?"#b45309":((p>=0.7)?"#c2410c":"#b91c1c"));
+      return '<tr><td class="r">'+x.rk+'</td><td class="s" title="'+esc(o.t.s)+'">'+esc(o.t.s)+'</td>'+
+        '<td class="m">'+campJt(o.tgt4)+'</td><td class="m">'+campJt(o.act)+'</td>'+
+        '<td class="a" style="color:'+col+'">'+fmtPctPlain(p)+'</td></tr>';
+    }).join("");
+    return '<div class="cshot-col"><div class="cshot-col-h">Peringkat '+from+'–'+to+'</div>'+
+      '<table class="cshot-tbl"><colgroup><col class="c-r"><col><col class="c-m"><col class="c-m"><col class="c-a"></colgroup>'+
+      '<thead><tr><th>#</th><th class="s">Store</th><th class="m">Target Sep–Des</th><th class="m">GWP MTD</th><th class="m">Ach</th></tr></thead>'+
+      '<tbody>'+rows+'</tbody></table></div>';
+  }).join("");
+  var tt=list.reduce(function(a,o){return a+o.tgt4;},0), ta=list.reduce(function(a,o){return a+o.act;},0);
+  return '<div class="cshot-head"><div><div class="cshot-title">75 store '+esc(bu)+' by %</div>'+
+      '<div class="cshot-sub">Peringkat berdasarkan % target akumulasi Sep–Des 2026 vs GWP MTD (s/d '+esc(lastLive)+') · nilai target &amp; GWP dalam Rp juta</div></div>'+
+      '<div class="cshot-meta"><b>Qoala Gadget Protection x MAP Tech</b><br>Target: Target-Campaign-2026.xlsx · Data: Data-raw.xlsx<br>Dibuat '+esc(gen||"—")+'</div></div>'+
+    '<div class="cshot-grid">'+blocks+'</div>'+
+    '<div class="cshot-foot"><span>TOTAL '+list.length+' store</span><span>Target Sep–Des '+fmtIDR(tt)+'</span><span>GWP MTD '+fmtIDR(ta)+'</span><span>Ach '+fmtPctPlain(tt>0?ta/tt:0)+'</span></div>';
+}
+function campShotFit(){
+  var box=$("cShot"); if(!box) return;
+  if(window.scrollY||window.scrollX) window.scrollTo(0,0);
+  box.style.zoom="";
+  var r=box.getBoundingClientRect();
+  var w=box.scrollWidth||box.offsetWidth, h=box.scrollHeight||box.offsetHeight;
+  var aw=window.innerWidth-r.left-12, ah=window.innerHeight-r.top-12;
+  var k=Math.min(1,aw/Math.max(w,1),ah/Math.max(h,1));
+  if(k<0.995) box.style.zoom=Math.max(0.45,k).toFixed(3);
+}
+/* tombol Keluar memudar otomatis supaya tidak ikut terfoto; gerakkan mouse untuk memunculkan */
+var campTimer=null;
+function campShotArm(){
+  var b=$("cShotExit"); if(!b) return;
+  b.classList.remove("dim");
+  if(campTimer){ clearTimeout(campTimer); campTimer=null; }
+  campTimer=setTimeout(function(){ if(CAMP_SHOT){ var x=$("cShotExit"); if(x) x.classList.add("dim"); } },2600);
+}
+function campShotOff(){
+  CAMP_SHOT=false;
+  document.body.classList.remove("camp-shot");
+  if(campTimer){ clearTimeout(campTimer); campTimer=null; }
+  var b=$("cShot"); if(b){ b.style.zoom=""; b.hidden=true; b.innerHTML=""; }
+  var x=$("cShotExit"); if(x) x.classList.remove("dim");
+  renderCampaign();
 }
 function renderCampaign(){
   var D=campaignData(), meta=D.meta;
@@ -1603,12 +1663,13 @@ function renderCampaign(){
   if($("cNote")) $("cNote").textContent="Peringkat dihitung per BU dari store yang memenuhi syarat (ach ≥ 90% + minimum polis/revenue). Skor = 50% achievement + 50% growth. Voucher = simulasi posisi saat ini.";
   /* ---- mode "75 store by %": Target akumulasi Sep–Des vs GWP MTD (tanpa growth/status/skor) ---- */
   var topBu=(CAMP.bu==="Digiplus75")?"Digiplus":((CAMP.bu==="Digimap75")?"Digimap":null);
+  var topList=topBu?R.filter(function(o){ return o.bu===topBu; }).sort(function(a,b){ return b.achAll-a.achAll; }).slice(0,75):[];
   if($("cLeadBody")) $("cLeadBody").style.display=topBu?"none":"";
   if($("cTopBody")) $("cTopBody").style.display=topBu?"":"none";
   if($("cLeadTitle")) $("cLeadTitle").innerHTML=topBu?("75 store "+topBu+" by %"):"Leaderboard store — voucher MAP";
   if($("cNote")) $("cNote").style.display=topBu?"none":"";
   if(topBu && $("cTopTable")){
-    var list=R.filter(function(o){ return o.bu===topBu; }).sort(function(a,b){ return b.achAll-a.achAll; }).slice(0,75);
+    var list=topList;
     if($("cTopNote")) $("cTopNote").textContent="Peringkat berdasarkan % target akumulasi Sep–Des vs GWP MTD (s/d "+lastLive+"). Tanpa growth, status, dan skor.";
     var tb=list.map(function(o,i){
       return '<tr><td class="sticky rk">'+(i+1)+'</td><td class="sticky"><b>'+esc(o.t.s)+'</b></td><td>'+esc(clean(o.t.rh))+'</td><td>'+esc(clean(o.t.am))+'</td><td>'+esc(clean(o.t.spa))+'</td><td>'+esc(clean(o.t.pa))+'</td>'+
@@ -1618,6 +1679,34 @@ function renderCampaign(){
     $("cTopTable").querySelector("tbody").innerHTML=tb||'<tr><td colspan="9">Tidak ada store.</td></tr>';
     var tt=list.reduce(function(a,o){return a+o.tgt4;},0), ta=list.reduce(function(a,o){return a+o.act;},0);
     $("cTopTable").querySelector("tfoot").innerHTML='<tr><td class="sticky rk"></td><td class="sticky"><b>TOTAL · '+list.length+' store</b></td><td></td><td></td><td></td><td></td><td>'+fmtIDR(tt)+'</td><td>'+fmtIDR(ta)+'</td><td>'+fmtPctPlain(tt>0?ta/tt:0)+'</td></tr>';
+  }
+  /* ---- mode screenshot: 75 store ditata 3 kolom × 25 baris ---- */
+  var sb=$("cShotBtn");
+  if(sb){
+    sb.style.display=topBu?"":"none";
+    sb.classList.toggle("on",!!CAMP_SHOT);
+    sb.textContent=CAMP_SHOT?"Mode screenshot: AKTIF":"Mode screenshot";
+    sb.onclick=function(){
+      if(CAMP_SHOT){ campShotOff(); return; }
+      CAMP_SHOT=true;
+      document.body.classList.add("camp-shot");
+      window.scrollTo(0,0);
+      renderCampaign();
+    };
+  }
+  var ex=$("cShotExit");
+  if(ex) ex.onclick=function(){ campShotOff(); };
+  var shot=$("cShot");
+  if(shot){
+    if(CAMP_SHOT && topBu){
+      shot.hidden=false;
+      shot.innerHTML=campShotHTML(topList,topBu,lastLive,DATA.meta&&DATA.meta.generated);
+      campShotFit();
+      campShotArm();
+    }else{
+      if(CAMP_SHOT && !topBu){ CAMP_SHOT=false; document.body.classList.remove("camp-shot"); }
+      shot.hidden=true; shot.innerHTML=""; shot.style.zoom="";
+    }
   }
   /* ---- AM ---- */
   var ams=campGroup(R,"am");
@@ -1840,6 +1929,7 @@ function renderRoute(){
   bindPage();
   /* pindah halaman = kembali ke tampilan normal (mode laporan/screenshot tidak ikut pindah) */
   SHOT=false; RPT=false; document.body.classList.remove("shot-mode");
+  CAMP_SHOT=false; document.body.classList.remove("camp-shot");
   var isSet=(ROUTE==="account"||ROUTE==="keamanan");
   document.body.classList.toggle("settings-mode",isSet);
   document.body.classList.toggle("campaign-mode",ROUTE==="campaign");
@@ -2083,10 +2173,11 @@ function startDashboard(){
   document.addEventListener("keydown",function(e){
     if(e.key!=="Escape") return;
     msCloseAll();
+    if(CAMP_SHOT){ campShotOff(); return; }
     if(SHOT||RPT){ SHOT=false; RPT=false; document.body.classList.remove("shot-mode"); renderTarget(); }
   });
-  document.addEventListener("mousemove",function(){ if(SHOT){ var b=$("shotExit"); if(b&&b.classList.contains("dim")) shotArm(); } });
-  window.addEventListener("resize",function(){ if(SHOT) shotFit(); });
+  document.addEventListener("mousemove",function(){ if(SHOT){ var b=$("shotExit"); if(b&&b.classList.contains("dim")) shotArm(); } if(CAMP_SHOT){ var x=$("cShotExit"); if(x&&x.classList.contains("dim")) campShotArm(); } });
+  window.addEventListener("resize",function(){ if(SHOT) shotFit(); if(CAMP_SHOT) campShotFit(); });
   $("btnReset").addEventListener("click",function(){
     F={year:[],month:[],ins:[],part:[],am:[],spa:[],pa:[],prom:[],prod:[],store:[],status:[]};
     msClearAll();

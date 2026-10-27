@@ -92,3 +92,15 @@ campaign sudah tetap (Sep–Des 2026); pembatasan akses (lock PA/Promotor) tetap
 - Perhitungan ulang otomatis setiap `tools\refresh.ps1` dijalankan
   (target campaign dibaca dari `Target-Campaign-2026.xlsx`).
 - Bulan baru otomatis masuk saat `Data-raw.xlsx` memuat data Nov/Des.
+
+## 7. Mode screenshot 75 store
+
+Tombol **Mode screenshot** muncul di header kartu leaderboard saat tab
+"75 store Digiplus by %" atau "75 store Digimap by %" aktif.
+
+- Tampilan berubah menjadi **3 kolom x 25 baris** (Peringkat 1-25, 26-50, 51-75),
+  tiap blok berisi: Rank, Store, Target Sep-Des, GWP MTD, Ach %.
+- Nilai target & GWP ditulis dalam **Rp juta** (dijelaskan di sub-judul).
+- Strip TOTAL di bawah: jumlah store, total target, total GWP MTD, dan Ach.
+- Skala otomatis diperkecil (zoom) supaya seluruh isi muat dalam satu layar.
+- Keluar: tombol **Keluar mode screenshot** (memudar otomatis) atau tombol **Esc**.
