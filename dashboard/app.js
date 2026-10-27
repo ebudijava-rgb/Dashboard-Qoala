@@ -910,7 +910,7 @@ function reportCaption(){
   var tm=DATA.targetMeta||{}, el=elapsedOf();
   var st=TGT[ROUTE]||{};
   var sl={estHi:"Estimasi % tertinggi",tg:"Target GWP terbesar",achLo:"Achievement GWP terendah",achHi:"Achievement GWP tertinggi",gap:"Selisih GWP terbesar"}[st.sort]||"Target GWP terbesar";
-  return (bits.length?bits.join(" · ")+" · ":"")+"Target: "+(tm.month?ymLabel(tm.month):"—")+" (data per tgl "+(el||"—")+")"+(ROUTE==="spa"?(" · basis target: "+(TMODE==="up"?"UP":"Reguler")):"")+" · urutan: "+sl+(st.q?(' · cari "'+st.q+'"'):"");
+  return (bits.length?bits.join(" · ")+" · ":"")+"Target: "+(tm.month?ymLabel(tm.month):"—")+" (data per tgl "+(el||"—")+") · urutan: "+sl+(st.q?(' · cari "'+st.q+'"'):"");
 }
 var shotTimer=null;
 function shotDim(){
