@@ -1648,9 +1648,9 @@ function renderCampaign(){
     });
   });
   if($("cVoucher")) $("cVoucher").textContent=fmtIDR(voucherTotal);
-  /* nomor urut tampil: 1,2,3,... untuk store yang memenuhi syarat */
+  /* nomor urut tampil: 1,2,3,... untuk semua store (yang memenuhi syarat di atas) */
   var dispRank={}, rkN=0;
-  f.forEach(function(o){ if(o.eligible) dispRank[o.t.s]=++rkN; });
+  f.forEach(function(o){ dispRank[o.t.s]=++rkN; });
   var body=f.map(function(o){
     var rk=dispRank[o.t.s];
     var v=voucherMap[o.t.s];
@@ -1668,7 +1668,7 @@ function renderCampaign(){
     var polS=f.reduce(function(a,o){return a+o.pol;},0);
     $("cTable").querySelector("tfoot").innerHTML='<tr><td class="sticky rk"></td><td class="sticky"><b>TOTAL · '+f.length+' store</b></td><td></td><td></td><td></td><td></td><td></td><td>'+fmtIDR(f.reduce(function(a,o){return a+o.tgt4;},0))+'</td><td>'+fmtIDR(tgtS)+'</td><td>'+fmtIDR(actS)+'</td><td>'+fmtPctPlain(tgtS>0?actS/tgtS:0)+'</td><td>'+fmtInt(polS)+'</td><td></td><td></td><td>'+f.filter(function(o){return o.eligible;}).length+' layak</td><td>'+fmtIDR(f.reduce(function(a,o){var v=voucherMap[o.t.s];return a+(v?v.v:0);},0))+'</td></tr>';
   }
-  if($("cNote")) $("cNote").textContent="Peringkat 1,2,3,… hanya untuk store yang memenuhi syarat (ach ≥ 90% + minimum polis/revenue); store yang belum memenuhi syarat diletakkan di bawah. Skor = 50% achievement + 50% growth. Voucher = simulasi posisi per BU.";
+  if($("cNote")) $("cNote").textContent="Nomor urut 1,2,3,… mengikuti urutan tampil; store yang memenuhi syarat (ach ≥ 90% + minimum polis/revenue) selalu di atas. Skor = 50% achievement + 50% growth. Voucher = simulasi posisi per BU.";
   /* ---- mode "75 store by %": Target akumulasi Sep–Des vs GWP MTD (tanpa growth/status/skor) ---- */
   var topBu=(CAMP.bu==="Digiplus75")?"Digiplus":((CAMP.bu==="Digimap75")?"Digimap":null);
   var topList=topBu?R.filter(function(o){ return o.bu===topBu; }).sort(function(a,b){ return b.achAll-a.achAll; }).slice(0,75):[];
