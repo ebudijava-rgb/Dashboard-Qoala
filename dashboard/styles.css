@@ -442,3 +442,6 @@ table.tgt.camp-tbl thead th.rk{color:#fff}
 table.tgt.camp-tbl td .bar-row.mini{grid-template-columns:1fr;justify-items:center;gap:3px;min-width:112px}
 table.tgt.camp-tbl td .bar-row.mini .bar-track{width:100%}
 .grand-card{background:#fffdfa}
+/* tab BU campaign (5 pilihan) */
+#cBuTabs{flex-wrap:wrap;justify-content:flex-end}
+#cBuTabs button{white-space:nowrap}

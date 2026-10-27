@@ -74,6 +74,8 @@ Growth kosong (`—`) bila baseline Mei–Agu = 0 (store baru).
 3. **Leaderboard store** — filter BU, pencarian, urut (skor/ach/growth/aktual/target),
    tab semua/layak/belum; kolom: Rank (per BU), Store, BU, RH, AM, SPA, PA, target, aktual,
    ach, polis, growth, skor, status, voucher. Ada baris TOTAL + unduh CSV.
+   Tab tambahan **"75 store Digiplus by %"** dan **"75 store Digimap by %"**: peringkat 1–75
+   per BU berdasarkan **% target akumulasi Sep–Des vs GWP MTD** (tanpa growth, status, skor).
 4. **Leaderboard AM** — 18 posisi voucher, agregat store di bawah AM.
 5. **Leaderboard SPV & RH** — Best SPV per BU ditampilkan sebagai **nama store** (7 store),
    Best RH memakai **kolom RH** (5 voucher).
