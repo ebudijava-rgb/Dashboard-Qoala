@@ -16,7 +16,9 @@ function fmtIDR(n){
   return "Rp "+fmtInt(n);
 }
 function fmtPct(x){ if(!isFinite(x)) return "—"; var s=(x>=0?"+":"")+(x*100).toLocaleString("id-ID",{maximumFractionDigits:1}); return s+"%"; }
-function fmtPctPlain(x){ if(!isFinite(x)) return "—"; return (x*100).toLocaleString("id-ID",{maximumFractionDigits:1})+"%"; }
+function fmtPctPlain(x){ if(!isFinite(x)) return "-"; return (x*100).toLocaleString("id-ID",{maximumFractionDigits:1})+"%"; }
+/* persentase dibulatkan ke bilangan bulat (mis. 76,8% -> 77%) untuk tabel 75 store & mode screenshot */
+function fmtPct0(x){ if(!isFinite(x)) return "-"; return Math.round(x*100).toLocaleString("id-ID")+"%"; }
 var MON=["Jan","Feb","Mar","Apr","Mei","Jun","Jul","Agu","Sep","Okt","Nov","Des"];
 function ymLabel(ym){ var p=ym.split("-"); var m=+p[1]; return MON[m-1]+" "+p[0]; }
 function daysInMonthOf(ym){ return new Date(+ym.slice(0,4), +ym.slice(5,7), 0).getDate(); }
@@ -1535,7 +1537,7 @@ function campShotHTML(list,bu,lastLive,gen){
       var col=(p>=1)?"#15803d":((p>=0.9)?"#b45309":((p>=0.7)?"#c2410c":"#b91c1c"));
       return '<tr><td class="r">'+x.rk+'</td><td class="s" title="'+esc(o.t.s)+'">'+esc(o.t.s)+'</td>'+
         '<td class="m">'+campJt(o.tgt4)+'</td><td class="m">'+campJt(o.act)+'</td>'+
-        '<td class="a" style="color:'+col+'">'+fmtPctPlain(p)+'</td></tr>';
+        '<td class="a" style="color:'+col+'">'+fmtPct0(p)+'</td></tr>';
     }).join("");
     return '<div class="cshot-col"><div class="cshot-col-h">Peringkat '+from+'–'+to+'</div>'+
       '<table class="cshot-tbl"><colgroup><col class="c-r"><col><col class="c-m"><col class="c-m"><col class="c-a"></colgroup>'+
@@ -1547,7 +1549,7 @@ function campShotHTML(list,bu,lastLive,gen){
       '<div class="cshot-sub">Peringkat berdasarkan % target akumulasi Sep–Des 2026 vs GWP MTD (s/d '+esc(lastLive)+') · nilai target &amp; GWP dalam Rp juta</div></div>'+
       '<div class="cshot-meta"><b>Qoala Gadget Protection x MAP Tech</b><br>Target: Target-Campaign-2026.xlsx · Data: Data-raw.xlsx<br>Dibuat '+esc(gen||"—")+'</div></div>'+
     '<div class="cshot-grid">'+blocks+'</div>'+
-    '<div class="cshot-foot"><span>TOTAL '+list.length+' store</span><span>Target Sep–Des '+fmtIDR(tt)+'</span><span>GWP MTD '+fmtIDR(ta)+'</span><span>Ach '+fmtPctPlain(tt>0?ta/tt:0)+'</span></div>';
+    '<div class="cshot-foot"><span>TOTAL '+list.length+' store</span><span>Target Sep–Des '+fmtIDR(tt)+'</span><span>GWP MTD '+fmtIDR(ta)+'</span><span>Ach '+fmtPct0(tt>0?ta/tt:0)+'</span></div>';
 }
 function campShotFit(){
   var box=$("cShot"); if(!box) return;
@@ -1674,11 +1676,11 @@ function renderCampaign(){
     var tb=list.map(function(o,i){
       return '<tr><td class="sticky rk">'+(i+1)+'</td><td class="sticky"><b>'+esc(o.t.s)+'</b></td><td>'+esc(clean(o.t.rh))+'</td><td>'+esc(clean(o.t.am))+'</td><td>'+esc(clean(o.t.spa))+'</td><td>'+esc(clean(o.t.pa))+'</td>'+
         '<td>'+fmtIDR(o.tgt4)+'</td><td>'+fmtIDR(o.act)+'</td>'+
-        '<td><div class="bar-row mini"><span class="v">'+fmtPctPlain(o.achAll)+'</span><div class="bar-track"><div class="bar-fill" style="width:'+Math.max(1,Math.min(100,o.achAll*100)).toFixed(1)+'%"></div></div></div></td></tr>';
+        '<td><div class="bar-row mini"><span class="v">'+fmtPct0(o.achAll)+'</span><div class="bar-track"><div class="bar-fill" style="width:'+Math.max(1,Math.min(100,o.achAll*100)).toFixed(1)+'%"></div></div></div></td></tr>';
     }).join("");
     $("cTopTable").querySelector("tbody").innerHTML=tb||'<tr><td colspan="9">Tidak ada store.</td></tr>';
     var tt=list.reduce(function(a,o){return a+o.tgt4;},0), ta=list.reduce(function(a,o){return a+o.act;},0);
-    $("cTopTable").querySelector("tfoot").innerHTML='<tr><td class="sticky rk"></td><td class="sticky"><b>TOTAL · '+list.length+' store</b></td><td></td><td></td><td></td><td></td><td>'+fmtIDR(tt)+'</td><td>'+fmtIDR(ta)+'</td><td>'+fmtPctPlain(tt>0?ta/tt:0)+'</td></tr>';
+    $("cTopTable").querySelector("tfoot").innerHTML='<tr><td class="sticky rk"></td><td class="sticky"><b>TOTAL · '+list.length+' store</b></td><td></td><td></td><td></td><td></td><td>'+fmtIDR(tt)+'</td><td>'+fmtIDR(ta)+'</td><td>'+fmtPct0(tt>0?ta/tt:0)+'</td></tr>';
   }
   /* ---- mode screenshot: 75 store ditata 3 kolom × 25 baris ---- */
   var sb=$("cShotBtn");
