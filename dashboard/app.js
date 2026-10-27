@@ -1504,11 +1504,11 @@ function campaignHTML(){
           '<select id="cSort"><option value="score">Urut: Skor (Ach+Growth)</option><option value="ach">Urut: Achievement</option><option value="growth">Urut: Growth</option><option value="act">Urut: Aktual GWP</option><option value="tgt">Urut: Target terbesar</option></select>'+
           '<div class="tabs" id="cTabTabs"><button data-t="all" class="on">Semua</button><button data-t="ok">Memenuhi syarat</button><button data-t="no">Belum memenuhi</button></div>'+
           '<button class="btn ghost sm" id="cCsv" type="button">Unduh CSV</button></div>'+
-        '<div class="tbl-wrap"><table id="cTable" class="tgt camp-tbl"><thead><tr><th class="rk">Rank</th><th class="sticky">Store</th><th>BU</th><th>RH</th><th>AM</th><th>SPA</th><th>PA</th><th>Target Sep–Des</th><th>Target s/d bln ini</th><th>GWP Campaign</th><th>Ach</th><th>Policy Campaign</th><th>Growth vs Mei–Agu</th><th>Skor</th><th>Status</th><th>Voucher</th></tr></thead><tbody></tbody><tfoot></tfoot></table></div>'+
+        '<div class="tbl-wrap"><table id="cTable" class="tgt camp-tbl"><thead><tr><th class="sticky rk">Rank</th><th class="sticky">Store</th><th>BU</th><th>RH</th><th>AM</th><th>SPA</th><th>PA</th><th>Target Sep–Des</th><th>Target s/d bln ini</th><th>GWP Campaign</th><th>Ach</th><th>Policy Campaign</th><th>Growth vs Mei–Agu</th><th>Skor</th><th>Status</th><th>Voucher</th></tr></thead><tbody></tbody><tfoot></tfoot></table></div>'+
       '</div>'+
       '<div id="cTopBody" style="display:none">'+
         '<p class="muted" id="cTopNote" style="margin:0 0 8px"></p>'+
-        '<div class="tbl-wrap"><table id="cTopTable" class="tgt camp-tbl"><thead><tr><th class="rk">Rank</th><th class="sticky">Store</th><th>RH</th><th>AM</th><th>SPA</th><th>PA</th><th>Target Sep–Des</th><th>GWP MTD</th><th>Ach %</th></tr></thead><tbody></tbody><tfoot></tfoot></table></div>'+
+        '<div class="tbl-wrap"><table id="cTopTable" class="tgt camp-tbl"><thead><tr><th class="sticky rk">Rank</th><th class="sticky">Store</th><th>RH</th><th>AM</th><th>SPA</th><th>PA</th><th>Target Sep–Des</th><th>GWP MTD</th><th>Ach %</th></tr></thead><tbody></tbody><tfoot></tfoot></table></div>'+
       '</div></section>'+
     '<div class="cols2"><section class="card"><h2>Leaderboard AM <span class="muted-sm">voucher MAP · 18 pemenang</span></h2><div id="cAm"></div></section>'+
       '<section class="card"><h2>Leaderboard SPV &amp; RH <span class="muted-sm">best SPV per BU · best RH</span></h2><div id="cSpa"></div></section></div>'+
@@ -1586,8 +1586,8 @@ function renderCampaign(){
   var body=f.map(function(o){
     var rk=rankMap[o.t.s];
     var v=voucherMap[o.t.s];
-    return '<tr'+(o.eligible?'':' class="dim"')+'><td class="rk">'+(rk?fmtInt(rk):'—')+'</td>'+
-      '<td><b>'+esc(o.t.s)+'</b></td><td>'+esc(o.bu)+'</td><td>'+esc(clean(o.t.rh))+'</td><td>'+esc(clean(o.t.am))+'</td><td>'+esc(clean(o.t.spa))+'</td><td>'+esc(clean(o.t.pa))+'</td>'+
+    return '<tr'+(o.eligible?'':' class="dim"')+'><td class="sticky rk">'+(rk?fmtInt(rk):'—')+'</td>'+
+      '<td class="sticky"><b>'+esc(o.t.s)+'</b></td><td>'+esc(o.bu)+'</td><td>'+esc(clean(o.t.rh))+'</td><td>'+esc(clean(o.t.am))+'</td><td>'+esc(clean(o.t.spa))+'</td><td>'+esc(clean(o.t.pa))+'</td>'+
       '<td>'+fmtIDR(o.tgt4)+'</td><td>'+fmtIDR(o.tgtE)+'</td><td>'+fmtIDR(o.act)+'</td>'+
       '<td><div class="bar-row mini"><span class="v">'+fmtPctPlain(o.ach)+'</span><div class="bar-track"><div class="bar-fill" style="width:'+Math.max(1,Math.min(100,o.ach*100)).toFixed(1)+'%"></div></div></div></td>'+
       '<td>'+fmtInt(o.pol)+'</td><td>'+fmtPct(o.growth)+'</td><td>'+(o.score*100).toLocaleString("id-ID",{maximumFractionDigits:1})+'</td>'+
@@ -1598,7 +1598,7 @@ function renderCampaign(){
     $("cTable").querySelector("tbody").innerHTML=body||'<tr><td colspan="16">Tidak ada store yang cocok.</td></tr>';
     var tgtS=f.reduce(function(a,o){return a+o.tgtE;},0), actS=f.reduce(function(a,o){return a+o.act;},0);
     var polS=f.reduce(function(a,o){return a+o.pol;},0);
-    $("cTable").querySelector("tfoot").innerHTML='<tr><td></td><td><b>TOTAL · '+f.length+' store</b></td><td></td><td></td><td></td><td></td><td></td><td>'+fmtIDR(f.reduce(function(a,o){return a+o.tgt4;},0))+'</td><td>'+fmtIDR(tgtS)+'</td><td>'+fmtIDR(actS)+'</td><td>'+fmtPctPlain(tgtS>0?actS/tgtS:0)+'</td><td>'+fmtInt(polS)+'</td><td></td><td></td><td>'+f.filter(function(o){return o.eligible;}).length+' layak</td><td>'+fmtIDR(f.reduce(function(a,o){var v=voucherMap[o.t.s];return a+(v?v.v:0);},0))+'</td></tr>';
+    $("cTable").querySelector("tfoot").innerHTML='<tr><td class="sticky rk"></td><td class="sticky"><b>TOTAL · '+f.length+' store</b></td><td></td><td></td><td></td><td></td><td></td><td>'+fmtIDR(f.reduce(function(a,o){return a+o.tgt4;},0))+'</td><td>'+fmtIDR(tgtS)+'</td><td>'+fmtIDR(actS)+'</td><td>'+fmtPctPlain(tgtS>0?actS/tgtS:0)+'</td><td>'+fmtInt(polS)+'</td><td></td><td></td><td>'+f.filter(function(o){return o.eligible;}).length+' layak</td><td>'+fmtIDR(f.reduce(function(a,o){var v=voucherMap[o.t.s];return a+(v?v.v:0);},0))+'</td></tr>';
   }
   if($("cNote")) $("cNote").textContent="Peringkat dihitung per BU dari store yang memenuhi syarat (ach ≥ 90% + minimum polis/revenue). Skor = 50% achievement + 50% growth. Voucher = simulasi posisi saat ini.";
   /* ---- mode "75 store by %": Target akumulasi Sep–Des vs GWP MTD (tanpa growth/status/skor) ---- */
@@ -1611,13 +1611,13 @@ function renderCampaign(){
     var list=R.filter(function(o){ return o.bu===topBu; }).sort(function(a,b){ return b.achAll-a.achAll; }).slice(0,75);
     if($("cTopNote")) $("cTopNote").textContent="Peringkat berdasarkan % target akumulasi Sep–Des vs GWP MTD (s/d "+lastLive+"). Tanpa growth, status, dan skor.";
     var tb=list.map(function(o,i){
-      return '<tr><td class="rk">'+(i+1)+'</td><td><b>'+esc(o.t.s)+'</b></td><td>'+esc(clean(o.t.rh))+'</td><td>'+esc(clean(o.t.am))+'</td><td>'+esc(clean(o.t.spa))+'</td><td>'+esc(clean(o.t.pa))+'</td>'+
+      return '<tr><td class="sticky rk">'+(i+1)+'</td><td class="sticky"><b>'+esc(o.t.s)+'</b></td><td>'+esc(clean(o.t.rh))+'</td><td>'+esc(clean(o.t.am))+'</td><td>'+esc(clean(o.t.spa))+'</td><td>'+esc(clean(o.t.pa))+'</td>'+
         '<td>'+fmtIDR(o.tgt4)+'</td><td>'+fmtIDR(o.act)+'</td>'+
         '<td><div class="bar-row mini"><span class="v">'+fmtPctPlain(o.achAll)+'</span><div class="bar-track"><div class="bar-fill" style="width:'+Math.max(1,Math.min(100,o.achAll*100)).toFixed(1)+'%"></div></div></div></td></tr>';
     }).join("");
     $("cTopTable").querySelector("tbody").innerHTML=tb||'<tr><td colspan="9">Tidak ada store.</td></tr>';
     var tt=list.reduce(function(a,o){return a+o.tgt4;},0), ta=list.reduce(function(a,o){return a+o.act;},0);
-    $("cTopTable").querySelector("tfoot").innerHTML='<tr><td></td><td><b>TOTAL · '+list.length+' store</b></td><td></td><td></td><td></td><td></td><td>'+fmtIDR(tt)+'</td><td>'+fmtIDR(ta)+'</td><td>'+fmtPctPlain(tt>0?ta/tt:0)+'</td></tr>';
+    $("cTopTable").querySelector("tfoot").innerHTML='<tr><td class="sticky rk"></td><td class="sticky"><b>TOTAL · '+list.length+' store</b></td><td></td><td></td><td></td><td></td><td>'+fmtIDR(tt)+'</td><td>'+fmtIDR(ta)+'</td><td>'+fmtPctPlain(tt>0?ta/tt:0)+'</td></tr>';
   }
   /* ---- AM ---- */
   var ams=campGroup(R,"am");

@@ -445,3 +445,5 @@ table.tgt.camp-tbl td .bar-row.mini .bar-track{width:100%}
 /* tab BU campaign (5 pilihan) */
 #cBuTabs{flex-wrap:wrap;justify-content:flex-end}
 #cBuTabs button{white-space:nowrap}
+/* kolom Rank + Store dibekukan (freeze) saat tabel digeser horizontal */
+table.tgt.camp-tbl th.sticky:nth-child(2),table.tgt.camp-tbl td.sticky:nth-child(2){box-shadow:6px 0 6px -6px rgba(0,0,0,.28)}
