@@ -15,7 +15,7 @@ sekaligus simulasi pemenang voucher dan grand prize sesuai T&C.
 
 | Data | Sumber | Catatan |
 |---|---|---|
-| Target campaign per store per bulan | `Target-Campaign-2026.xlsx` (kolom A–K) | 230 store: 129 Digiplus + 101 Digimap; total Rp 50.002 jt (Sep 10.000 · Okt 12.499 · Nov 13.500 · Des 14.003) |
+| Target campaign per store per bulan | `Target-Campaign-2026.xlsx` (kolom A–L) | 230 store: 129 Digiplus + 101 Digimap; total Rp 50.002 jt (Sep 10.000 · Okt 12.499 · Nov 13.500 · Des 14.003); kolom RH (D) berisi 5 RH |
 | Realisasi GWP & polis | `Data-raw.xlsx` (via `summary.json`) | per store, per bulan; bulan berjalan ikut data terakhir |
 | Baseline growth | `Data-raw.xlsx` bulan Mei–Agu 2026 | rata-rata GWP per bulan |
 
@@ -57,9 +57,9 @@ Growth kosong (`—`) bila baseline Mei–Agu = 0 (store baru).
 | Kategori T&C | Dimensi dashboard | Alasan |
 |---|---|---|
 | Store | `store` | — |
-| SPV | `PA` | jumlah PA (14) selaras kuota 7 per BU |
+| SPV | `store` (top 7 per BU) | Best SPV ditampilkan sebagai **nama store**, bukan nama PA |
 | AM | `AM` | jumlah AM (18) selaras kuota 3 per BU |
-| RH | `SPA` | SPA (4) selaras kuota 2 |
+| RH | `RH` (kolom baru di file target) | 5 RH: Dzikri Rahmadanor, Shufi, Alex, Andi Sawito, Dhesmon |
 | HO | — | belum ada di data; ditandai "belum tersedia" |
 
 > Bila pemetaan berbeda (mis. SPV = SPA), cukup ubah di halaman/logika
@@ -72,10 +72,11 @@ Growth kosong (`—`) bila baseline Mei–Agu = 0 (store baru).
 2. **Progres per bulan** — tabel Sep/Oct/Nov/Des: target, aktual, ach, polis, bar progres.
    Bulan yang belum berjalan hanya menampilkan target.
 3. **Leaderboard store** — filter BU, pencarian, urut (skor/ach/growth/aktual/target),
-   tab semua/layak/belum; kolom: Rank (per BU), Store, BU, AM, SPA, PA, target, aktual,
+   tab semua/layak/belum; kolom: Rank (per BU), Store, BU, RH, AM, SPA, PA, target, aktual,
    ach, polis, growth, skor, status, voucher. Ada baris TOTAL + unduh CSV.
 4. **Leaderboard AM** — 18 posisi voucher, agregat store di bawah AM.
-5. **Leaderboard SPV & RH** — Best SPV per BU (7) dan Best RH (5).
+5. **Leaderboard SPV & RH** — Best SPV per BU ditampilkan sebagai **nama store** (7 store),
+   Best RH memakai **kolom RH** (5 voucher).
 6. **Grand prize** — simulasi 25 pemenang per kategori.
 7. **Ringkasan T&C**.
 

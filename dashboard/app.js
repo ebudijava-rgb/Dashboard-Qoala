@@ -1484,7 +1484,7 @@ function campRowsFiltered(){
   var base=LOCK?D.rows.filter(function(o){ return o.scope; }):D.rows;
   var rows=base.filter(function(o){
     if(CAMP.bu!=="ALL" && o.bu!==CAMP.bu) return false;
-    if(CAMP.q){ var hay=norm(o.t.s+" "+clean(o.t.pa)+" "+clean(o.t.am)+" "+clean(o.t.spa)); if(hay.indexOf(CAMP.q)<0) return false; }
+    if(CAMP.q){ var hay=norm(o.t.s+" "+clean(o.t.rh)+" "+clean(o.t.pa)+" "+clean(o.t.am)+" "+clean(o.t.spa)); if(hay.indexOf(CAMP.q)<0) return false; }
     if(CAMP.tab==="ok" && !o.eligible) return false;
     if(CAMP.tab==="no" && o.eligible) return false;
     return true;
@@ -1502,7 +1502,7 @@ function campaignHTML(){
         '<select id="cSort"><option value="score">Urut: Skor (Ach+Growth)</option><option value="ach">Urut: Achievement</option><option value="growth">Urut: Growth</option><option value="act">Urut: Aktual GWP</option><option value="tgt">Urut: Target terbesar</option></select>'+
         '<div class="tabs" id="cTabTabs"><button data-t="all" class="on">Semua</button><button data-t="ok">Memenuhi syarat</button><button data-t="no">Belum memenuhi</button></div>'+
         '<button class="btn ghost sm" id="cCsv" type="button">Unduh CSV</button></div>'+
-      '<div class="tbl-wrap"><table id="cTable" class="tgt"><thead><tr><th class="rk">Rank</th><th class="sticky">Store</th><th>BU</th><th>AM</th><th>SPA</th><th>PA</th><th>Tgt Sep–Des</th><th>Tgt s/d bln ini</th><th>Akt s/d bln ini</th><th>Ach</th><th>Akt polis</th><th>Growth vs Mei–Agu</th><th>Skor</th><th>Status</th><th>Voucher</th></tr></thead><tbody></tbody><tfoot></tfoot></table></div></section>'+
+      '<div class="tbl-wrap"><table id="cTable" class="tgt"><thead><tr><th class="rk">Rank</th><th class="sticky">Store</th><th>BU</th><th>RH</th><th>AM</th><th>SPA</th><th>PA</th><th>Tgt Sep–Des</th><th>Tgt s/d bln ini</th><th>Akt s/d bln ini</th><th>Ach</th><th>Akt polis</th><th>Growth vs Mei–Agu</th><th>Skor</th><th>Status</th><th>Voucher</th></tr></thead><tbody></tbody><tfoot></tfoot></table></div></section>'+
     '<div class="cols2"><section class="card"><h2>Leaderboard AM <span class="muted-sm">voucher MAP · 18 pemenang</span></h2><div id="cAm"></div></section>'+
       '<section class="card"><h2>Leaderboard SPV &amp; RH <span class="muted-sm">best SPV per BU · best RH</span></h2><div id="cSpa"></div></section></div>'+
     '<section class="card"><h2>Grand Prize — Trip Korea Selatan <span class="muted-sm">simulasi 25 pemenang</span></h2><div id="cGrand" class="grand-grid"></div></section>'+
@@ -1580,7 +1580,7 @@ function renderCampaign(){
     var rk=rankMap[o.t.s];
     var v=voucherMap[o.t.s];
     return '<tr'+(o.eligible?'':' class="dim"')+'><td class="rk">'+(rk?fmtInt(rk):'—')+'</td>'+
-      '<td><b>'+esc(o.t.s)+'</b></td><td>'+esc(o.bu)+'</td><td>'+esc(clean(o.t.am))+'</td><td>'+esc(clean(o.t.spa))+'</td><td>'+esc(clean(o.t.pa))+'</td>'+
+      '<td><b>'+esc(o.t.s)+'</b></td><td>'+esc(o.bu)+'</td><td>'+esc(clean(o.t.rh))+'</td><td>'+esc(clean(o.t.am))+'</td><td>'+esc(clean(o.t.spa))+'</td><td>'+esc(clean(o.t.pa))+'</td>'+
       '<td>'+fmtIDR(o.tgt4)+'</td><td>'+fmtIDR(o.tgtE)+'</td><td>'+fmtIDR(o.act)+'</td>'+
       '<td><div class="bar-row mini"><span class="v">'+fmtPctPlain(o.ach)+'</span><div class="bar-track"><div class="bar-fill" style="width:'+Math.max(1,Math.min(100,o.ach*100)).toFixed(1)+'%"></div></div></div></td>'+
       '<td>'+fmtInt(o.pol)+'</td><td>'+fmtPct(o.growth)+'</td><td>'+(o.score*100).toLocaleString("id-ID",{maximumFractionDigits:1})+'</td>'+
@@ -1588,10 +1588,10 @@ function renderCampaign(){
       '<td>'+(v?fmtIDR(v.v)+' <span class="muted-sm">#'+v.r+'</span>':'—')+'</td></tr>';
   }).join("");
   if($("cTable")){
-    $("cTable").querySelector("tbody").innerHTML=body||'<tr><td colspan="15">Tidak ada store yang cocok.</td></tr>';
+    $("cTable").querySelector("tbody").innerHTML=body||'<tr><td colspan="16">Tidak ada store yang cocok.</td></tr>';
     var tgtS=f.reduce(function(a,o){return a+o.tgtE;},0), actS=f.reduce(function(a,o){return a+o.act;},0);
     var polS=f.reduce(function(a,o){return a+o.pol;},0);
-    $("cTable").querySelector("tfoot").innerHTML='<tr><td></td><td><b>TOTAL · '+f.length+' store</b></td><td></td><td></td><td></td><td></td><td>'+fmtIDR(f.reduce(function(a,o){return a+o.tgt4;},0))+'</td><td>'+fmtIDR(tgtS)+'</td><td>'+fmtIDR(actS)+'</td><td>'+fmtPctPlain(tgtS>0?actS/tgtS:0)+'</td><td>'+fmtInt(polS)+'</td><td></td><td></td><td>'+f.filter(function(o){return o.eligible;}).length+' layak</td><td>'+fmtIDR(f.reduce(function(a,o){var v=voucherMap[o.t.s];return a+(v?v.v:0);},0))+'</td></tr>';
+    $("cTable").querySelector("tfoot").innerHTML='<tr><td></td><td><b>TOTAL · '+f.length+' store</b></td><td></td><td></td><td></td><td></td><td></td><td>'+fmtIDR(f.reduce(function(a,o){return a+o.tgt4;},0))+'</td><td>'+fmtIDR(tgtS)+'</td><td>'+fmtIDR(actS)+'</td><td>'+fmtPctPlain(tgtS>0?actS/tgtS:0)+'</td><td>'+fmtInt(polS)+'</td><td></td><td></td><td>'+f.filter(function(o){return o.eligible;}).length+' layak</td><td>'+fmtIDR(f.reduce(function(a,o){var v=voucherMap[o.t.s];return a+(v?v.v:0);},0))+'</td></tr>';
   }
   if($("cNote")) $("cNote").textContent="Peringkat dihitung per BU dari store yang memenuhi syarat (ach ≥ 90% + minimum polis/revenue). Skor = 50% achievement + 50% growth. Voucher = simulasi posisi saat ini.";
   /* ---- AM ---- */
@@ -1603,23 +1603,23 @@ function renderCampaign(){
       '<span class="muted-sm">'+(tier?fmtIDR(tier.v):'—')+'</span></div>';
   }).join("");
   if($("cAm")) $("cAm").innerHTML=amHTML+'<p class="muted-sm" style="margin-top:8px">Skor AM = agregat achievement &amp; growth seluruh store campaign di bawahnya.</p>';
-  /* ---- SPV (PA) per BU + RH (SPA) ---- */
+  /* ---- Best SPV (per BU, berbasis store) + Best RH (kolom RH) ---- */
   var spvHTML="";
   ["Digiplus","Digimap"].forEach(function(bu){
-    var g=campGroup(R.filter(function(o){return o.bu===bu;}),"pa").slice(0,7);
-    spvHTML+='<h3 class="sub-head">Best SPV '+bu+' <span class="muted-sm">7 pemenang · grand prize</span></h3>';
-    spvHTML+=g.map(function(x,i){ return '<div class="bar-row"><span class="n">'+(i+1)+'. '+esc(x.k)+'</span><span class="v">'+fmtPctPlain(x.ach)+'</span><div class="bar-track"><div class="bar-fill" style="width:'+Math.max(2,Math.min(100,x.score*100)).toFixed(1)+'%"></div></div></div>'; }).join("");
+    var g=R.filter(function(o){return o.bu===bu && o.eligible;}).sort(function(a,b){return b.score-a.score;}).slice(0,7);
+    spvHTML+='<h3 class="sub-head">Best SPV '+bu+' <span class="muted-sm">7 store · grand prize</span></h3>';
+    spvHTML+=g.map(function(o,i){ return '<div class="bar-row"><span class="n">'+(i+1)+'. '+esc(o.t.s)+'</span><span class="v">'+fmtPctPlain(o.ach)+' · '+fmtPct(o.growth)+'</span><div class="bar-track"><div class="bar-fill" style="width:'+Math.max(2,Math.min(100,o.score*100)).toFixed(1)+'%"></div></div></div>'; }).join("")||'<p class="muted-sm">Belum ada store yang memenuhi syarat.</p>';
   });
-  var rhs=campGroup(R,"spa").slice(0,5);
-  spvHTML+='<h3 class="sub-head">Best RH <span class="muted-sm">2 pemenang</span></h3>'+
-    rhs.slice(0,3).map(function(x,i){ var tier=campTier(CAMP_VOUCHER.rh,i+1); return '<div class="bar-row"><span class="n">'+(i+1)+'. '+esc(x.k)+'</span><span class="v">'+fmtPctPlain(x.ach)+'</span><div class="bar-track"><div class="bar-fill" style="width:'+Math.max(2,Math.min(100,x.score*100)).toFixed(1)+'%"></div></div><span class="muted-sm">'+(tier?fmtIDR(tier.v):'—')+'</span></div>'; }).join("")+
-    '<p class="muted-sm" style="margin-top:8px">Pemetaan: SPV = PA, RH = SPA (sesuai struktur data dashboard). Kategori HO belum tersedia di data.</p>';
+  var rhs=campGroup(R,"rh");
+  spvHTML+='<h3 class="sub-head">Best RH <span class="muted-sm">5 voucher · grand prize 2</span></h3>'+
+    rhs.slice(0,5).map(function(x,i){ var tier=campTier(CAMP_VOUCHER.rh,i+1); return '<div class="bar-row"><span class="n">'+(i+1)+'. '+esc(x.k)+' <span class="muted-sm">'+x.n+' store</span></span><span class="v">'+fmtPctPlain(x.ach)+'</span><div class="bar-track"><div class="bar-fill" style="width:'+Math.max(2,Math.min(100,x.score*100)).toFixed(1)+'%"></div></div><span class="muted-sm">'+(tier?fmtIDR(tier.v):'—')+'</span></div>'; }).join("")+
+    '<p class="muted-sm" style="margin-top:8px">Best SPV = peringkat <b>store</b> per BU (7 store). Best RH = agregat store per RH (kolom RH di Target-Campaign-2026). Kategori HO belum tersedia di data.</p>';
   if($("cSpa")) $("cSpa").innerHTML=spvHTML;
   /* ---- grand prize ---- */
   var grand=[];
   ["Digiplus","Digimap"].forEach(function(bu){
-    var spv=campGroup(R.filter(function(o){return o.bu===bu;}),"pa").slice(0,7);
-    grand.push({t:"Best SPV "+bu+" (7)",items:spv.map(function(x,i){return (i+1)+". "+x.k;} )});
+    var spv=R.filter(function(o){return o.bu===bu && o.eligible;}).sort(function(a,b){return b.score-a.score;}).slice(0,7);
+    grand.push({t:"Best SPV "+bu+" (7)",items:spv.map(function(o,i){return (i+1)+". "+o.t.s;} )});
   });
   ["Digiplus","Digimap"].forEach(function(bu){
     var am=campGroup(R.filter(function(o){return o.bu===bu;}),"am").slice(0,3);
@@ -1656,10 +1656,10 @@ function renderCampaign(){
   });
   var csv=$("cCsv");
   if(csv) csv.onclick=function(){
-    var head="rank,store,bu,am,spa,pa,target_sep_des,target_sd_bulan,aktual_sd_bulan,ach_pct,polis,growth_pct,skor,layak,voucher\n";
+    var head="rank,store,bu,rh,am,spa,pa,target_sep_des,target_sd_bulan,aktual_sd_bulan,ach_pct,polis,growth_pct,skor,layak,voucher\n";
     var lines=f.map(function(o){
       var v=voucherMap[o.t.s];
-      return [rankMap[o.t.s]||"",o.t.s,o.bu,o.t.am||"",o.t.spa||"",o.t.pa||"",Math.round(o.tgt4),Math.round(o.tgtE),Math.round(o.act),
+      return [rankMap[o.t.s]||"",o.t.s,o.bu,o.t.rh||"",o.t.am||"",o.t.spa||"",o.t.pa||"",Math.round(o.tgt4),Math.round(o.tgtE),Math.round(o.act),
         (o.ach*100).toFixed(1),o.pol,(o.growth==null?"":(o.growth*100).toFixed(1)),(o.score*100).toFixed(1),(o.eligible?"ya":"belum"),v?v.v:""]
         .map(function(x){ return '"'+String(x).replace(/"/g,'""')+'"'; }).join(",");
     }).join("\n");
