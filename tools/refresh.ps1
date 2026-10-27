@@ -103,6 +103,7 @@ Say ""
 Say "[3/3] Commit + push ke GitHub ..." "Cyan"
 $msg = "Refresh data $gen (hari berjalan s/d tgl $last, $rows baris)"
 $r = GitRun @("add", "dashboard/data/summary.js", "dashboard/data/summary.json", "Target.xlsx")
+if (Test-Path (Join-Path $root "Target-Campaign-2026.xlsx")) { $r = GitRun @("add", "Target-Campaign-2026.xlsx") }
 if ($r.code -ne 0) { throw "git add gagal: $($r.out)" }
 
 $r = GitRun @("commit", "-m", $msg)

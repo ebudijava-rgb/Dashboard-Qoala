@@ -52,6 +52,18 @@ if (Test-Path $tgt) {
   $extra += ',"target":' + (Get-Content $tmptJ -Raw) + ',"targetMeta":' + $meta
 } else { Write-Output "Target.xlsx tidak ada - lanjut tanpa target" }
 
+# ---- Target Campaign Sep-Des 2026 (Target-Campaign-2026.xlsx) ----
+$cmp  = Join-Path $root "Target-Campaign-2026.xlsx"
+$tmpc = Join-Path $env:TEMP "opencode\copy-campaign.xlsx"
+$tmpcJ= Join-Path $env:TEMP "opencode\campaign.json"
+if (Test-Path $cmp) {
+  Copy-Item -LiteralPath $cmp -Destination $tmpc -Force
+  Add-Type -Path (Join-Path $root "tools\CampaignExport.cs") -ReferencedAssemblies @("System.IO.Compression.FileSystem","System.Xml","System.IO.Compression")
+  Write-Output ([CampaignExport]::Run($tmpc, $tmpcJ))
+  $cmeta = '{"source":"Target-Campaign-2026.xlsx","label":"Campaign 2026","months":["2026-09","2026-10","2026-11","2026-12"],"base":["2026-05","2026-06","2026-07","2026-08"],"winnerSlots":75,"min":{"Digimap":{"polis":100,"rev":100000000},"Digiplus":{"polis":70,"rev":70000000}},"threshold":0.9}'
+  $extra += ',"campaign":' + (Get-Content $tmpcJ -Raw) + ',"campaignMeta":' + $cmeta
+} else { Write-Output "Target-Campaign-2026.xlsx tidak ada - halaman Campaign tanpa target" }
+
 if (Test-Path $mus) {
   Copy-Item -LiteralPath $mus -Destination $tmpm -Force
   Add-Type -Path (Join-Path $root "tools\UserExport.cs") -ReferencedAssemblies @("System.IO.Compression.FileSystem","System.Xml","System.IO.Compression")

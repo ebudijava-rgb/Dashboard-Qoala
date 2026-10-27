@@ -16,6 +16,7 @@ function fmtIDR(n){
   return "Rp "+fmtInt(n);
 }
 function fmtPct(x){ if(!isFinite(x)) return "—"; var s=(x>=0?"+":"")+(x*100).toLocaleString("id-ID",{maximumFractionDigits:1}); return s+"%"; }
+function fmtPctPlain(x){ if(!isFinite(x)) return "—"; return (x*100).toLocaleString("id-ID",{maximumFractionDigits:1})+"%"; }
 var MON=["Jan","Feb","Mar","Apr","Mei","Jun","Jul","Agu","Sep","Okt","Nov","Des"];
 function ymLabel(ym){ var p=ym.split("-"); var m=+p[1]; return MON[m-1]+" "+p[0]; }
 function daysInMonthOf(ym){ return new Date(+ym.slice(0,4), +ym.slice(5,7), 0).getDate(); }
@@ -80,6 +81,7 @@ var PAGES = {
   pa:{title:"PA", scope:"pa", list:"pa", label:"Pilih PA"},
   promotor:{title:"Promotor", scope:"prom", list:"prom", label:"Pilih Promotor"},
   best:{title:"Best Achievement", scope:null, eyebrow:"SALES MONITORING · BEST ACHIEVEMENT"},
+  campaign:{title:"Campaign 2026", scope:null, eyebrow:"SALES MONITORING · CAMPAIGN 2026"},
   account:{title:"Account", scope:null, eyebrow:"SETTING · ACCOUNT", admin:1},
   keamanan:{title:"Keamanan", scope:null, eyebrow:"SETTING · KEAMANAN", admin:1}
 };
@@ -634,6 +636,7 @@ function cmpTip(c, kind, isNoP){
 
 function render(agg){
   if(ROUTE==="best"){ renderBest(); return; }
+  if(ROUTE==="campaign"){ renderCampaign(); return; }
   var vis=visibleMonths();
   var labels=vis.map(function(i){return ymLabel(DATA.months[i]);});
   var nop=vis.map(function(i){return agg.mNop[i];});
@@ -1347,8 +1350,311 @@ function renderSetting(){
   if(ml) ml.textContent="Setting · akun & keamanan · data "+(DATA.meta&&DATA.meta.generated?DATA.meta.generated:"—");
 }
 
+/* ================= CAMPAIGN 2026 (Sep–Des 2026) =================
+   Program Reward & Trip Qoala Protection x MAP Tech.
+   Target : Target-Campaign-2026.xlsx (per store, per bulan Sep–Des).
+   Realisasi: Data-raw.xlsx (GWP & polis per store per bulan).
+   Growth : rata-rata GWP/bulan Sep–Des vs rata-rata Mei–Agu.
+   Syarat T&C: capaian ≥90% target + minimum polis & revenue per BU. */
+var CAMP = {bu:"ALL", q:"", sort:"score", tab:"all"};
+var CAMP_VOUCHER = {
+  store:[{r:1,n:1,v:10000000},{r:2,n:1,v:9000000},{r:3,n:1,v:8000000},{r:4,n:2,v:6000000},{r:5,n:3,v:5000000},{r:6,n:7,v:4000000},{r:7,n:60,v:2500000}],
+  am:[{r:1,n:1,v:10000000},{r:2,n:1,v:8500000},{r:3,n:1,v:6500000},{r:4,n:3,v:4500000},{r:5,n:5,v:3500000},{r:6,n:7,v:2000000}],
+  rh:[{r:1,n:1,v:8000000},{r:2,n:2,v:5500000},{r:3,n:2,v:4000000}]
+};
+function campTier(list,pos){
+  var acc=0;
+  for(var i=0;i<list.length;i++){ acc+=list[i].n; if(pos<=acc) return list[i]; }
+  return null;
+}
+var CAMP_CACHE=null;
+function campaignData(){
+  var C=DATA.campaign||[];
+  var meta=DATA.campaignMeta||{};
+  var cm=meta.months||["2026-09","2026-10","2026-11","2026-12"];
+  var bm=meta.base||["2026-05","2026-06","2026-07","2026-08"];
+  var lockKey=LOCK?(LOCK.field+":"+LOCK.idx):"ALL";
+  if(CAMP_CACHE && CAMP_CACHE.lock===lockKey) return CAMP_CACHE;
+  var mi={},i;
+  for(i=0;i<DATA.months.length;i++) mi[DATA.months[i]]=i;
+  var cmIdx=cm.map(function(x){ return mi[x]==null?-1:mi[x]; });
+  var cmSet={}, bmSet={};
+  cmIdx.forEach(function(x){ if(x>=0) cmSet[x]=1; });
+  bm.forEach(function(x){ if(mi[x]!=null) bmSet[mi[x]]=1; });
+  var sim={};
+  for(i=0;i<DATA.store.length;i++) sim[DATA.store[i]]=i;
+  var byName={}, byNorm={}, byIdx={}, rows=[];
+  C.forEach(function(t){
+    var o={t:t, si:(sim[t.s]==null?-1:sim[t.s]), base:0, baseN:0, m:{}, n:{}};
+    rows.push(o);
+    byName[t.s]=o;
+    byNorm[norm(t.s)]=o;
+    if(o.si>=0) byIdx[o.si]=o;
+  });
+  var facts=DATA.facts;
+  for(i=0;i<facts.length;i++){
+    var f=facts[i];
+    if(LOCK && String(f[LOCK.field])!==String(LOCK.idx)) continue;
+    var sn=DATA.store[f[4]];
+    var o=byName[sn]||byNorm[norm(sn)]||byIdx[f[4]];
+    if(!o) continue;
+    var m=f[0];
+    if(bmSet[m]){ o.base+=f[10]; o.baseN+=f[11]; }
+    else if(cmSet[m]){ o.m[m]=(o.m[m]||0)+f[10]; o.n[m]=(o.n[m]||0)+f[11]; }
+  }
+  /* bulan campaign yang sudah ada datanya (mis. Sep & Okt) */
+  var live=[];
+  cm.forEach(function(ym,k){ if(mi[ym]!=null && cmIdx[k]>=0) live.push({ym:ym, k:k, idx:cmIdx[k]}); });
+  var tgt=T=>[T.ts,T.to,T.tn,T.td];
+  var tot={tgt4:0,tgtE:0,act:0,pol:0,base:0,baseN:0,tgtBy:{},actBy:{},polBy:{}};
+  var nLive=live.length||1;
+  rows.forEach(function(o){
+    var T=tgt(o.t);
+    o.tgt4=T.reduce(function(a,b){return a+(b||0);},0);
+    o.tgtE=0; o.act=0; o.pol=0;
+    live.forEach(function(L){
+      o.tgtE+=T[L.k]||0;
+      o.act+=o.m[L.idx]||0;
+      o.pol+=o.n[L.idx]||0;
+    });
+    o.ach=o.tgtE>0?o.act/o.tgtE:0;
+    o.baseAvg=o.base/4;
+    o.actAvg=o.act/nLive;
+    o.growth=(o.baseAvg>0)?(o.actAvg/o.baseAvg-1):null;
+    o.gIdx=(o.growth==null)?0.5:Math.max(0,Math.min(1,0.5+o.growth/2));
+    o.score=0.5*o.ach+0.5*o.gIdx;
+    var minCfg=(meta.min||{})[o.t.p]||{polis:0,rev:0};
+    var scale=nLive/4;
+    o.minPolis=(minCfg.polis||0)*scale;
+    o.minRev=(minCfg.rev||0)*scale;
+    o.eligible=(o.ach>=(meta.threshold||0.9)) && o.pol>=o.minPolis && o.act>=o.minRev;
+    o.bu=o.t.p||"(tanpa BU)";
+    tot.tgt4+=o.tgt4; tot.tgtE+=o.tgtE; tot.act+=o.act; tot.pol+=o.pol;
+    tot.base+=o.base; tot.baseN+=o.baseN;
+    live.forEach(function(L){
+      tot.actBy[L.ym]=(tot.actBy[L.ym]||0)+(o.m[L.idx]||0);
+      tot.polBy[L.ym]=(tot.polBy[L.ym]||0)+(o.n[L.idx]||0);
+    });
+    cm.forEach(function(ym,k){ tot.tgtBy[ym]=(tot.tgtBy[ym]||0)+(T[k]||0); });
+  });
+  cm.forEach(function(ym,k){ if(tot.tgtBy[ym]==null) tot.tgtBy[ym]=0; });
+  tot.months=cm; tot.live=live; tot.ach=tot.tgtE>0?tot.act/tot.tgtE:0;
+  tot.baseAvg=tot.base/4; tot.actAvg=tot.act/nLive;
+  tot.growth=tot.baseAvg>0?(tot.actAvg/tot.baseAvg-1):null;
+  CAMP_CACHE={lock:lockKey, rows:rows, tot:tot, cm:cm, live:live, meta:meta};
+  return CAMP_CACHE;
+}
+function campGroup(rows, field){
+  var m={}, order=[];
+  rows.forEach(function(o){
+    var k=clean(o.t[field])||"(Kosong)";
+    if(!m[k]){ m[k]={k:k,tgt4:0,tgtE:0,act:0,pol:0,base:0,n:0,eligible:0,maxScore:0,sumScore:0}; order.push(k); }
+    var g=m[k];
+    g.tgt4+=o.tgt4; g.tgtE+=o.tgtE; g.act+=o.act; g.pol+=o.pol; g.base+=o.base; g.n++;
+    if(o.eligible) g.eligible++;
+    g.sumScore+=o.score; if(o.score>g.maxScore) g.maxScore=o.score;
+  });
+  order.forEach(function(k){
+    var g=m[k];
+    g.ach=g.tgtE>0?g.act/g.tgtE:0;
+    g.baseAvg=g.base/4; g.actAvg=g.act/((CAMP_CACHE.live.length)||1);
+    g.growth=g.baseAvg>0?(g.actAvg/g.baseAvg-1):null;
+    g.gIdx=(g.growth==null)?0.5:Math.max(0,Math.min(1,0.5+g.growth/2));
+    g.score=0.5*g.ach+0.5*g.gIdx;
+  });
+  var arr=order.map(function(k){return m[k];});
+  arr.sort(function(a,b){return b.score-a.score;});
+  arr.forEach(function(g,i){ g.rank=i+1; });
+  return arr;
+}
+function campRowsFiltered(){
+  var D=campaignData();
+  var rows=D.rows.filter(function(o){
+    if(CAMP.bu!=="ALL" && o.bu!==CAMP.bu) return false;
+    if(CAMP.q){ var hay=norm(o.t.s+" "+clean(o.t.pa)+" "+clean(o.t.am)+" "+clean(o.t.spa)); if(hay.indexOf(CAMP.q)<0) return false; }
+    if(CAMP.tab==="ok" && !o.eligible) return false;
+    if(CAMP.tab==="no" && o.eligible) return false;
+    return true;
+  });
+  return {D:D, rows:rows};
+}
+function campaignHTML(){
+  return '<section class="kpis" id="cKpis"></section>'+
+    '<section class="card"><div class="card-h row"><div><h2>Progres campaign per bulan <span class="muted-sm">Sep–Des 2026</span></h2><p class="muted" id="cMonthNote"></p></div></div>'+
+      '<div class="tbl-wrap"><table id="cMonthTable" class="tgt"><thead><tr><th>Bulan</th><th>Tgt GWP</th><th>Akt GWP</th><th>Ach</th><th>Polis</th><th>Progres</th></tr></thead><tbody></tbody><tfoot></tfoot></table></div></section>'+
+    '<section class="card"><div class="card-h row"><div><h2>Leaderboard store — voucher MAP</h2><p class="muted" id="cNote"></p></div>'+
+      '<div class="tabs" id="cBuTabs"><button data-b="ALL" class="on">Semua</button><button data-b="Digiplus">Digiplus</button><button data-b="Digimap">Digimap</button></div></div>'+
+      '<div class="kpis" id="cBuKpis" style="margin-top:12px"></div>'+
+      '<div class="tgt-controls"><input id="cSearch" type="search" placeholder="Cari store / PA / AM / SPA…">'+
+        '<select id="cSort"><option value="score">Urut: Skor (Ach+Growth)</option><option value="ach">Urut: Achievement</option><option value="growth">Urut: Growth</option><option value="act">Urut: Aktual GWP</option><option value="tgt">Urut: Target terbesar</option></select>'+
+        '<div class="tabs" id="cTabTabs"><button data-t="all" class="on">Semua</button><button data-t="ok">Memenuhi syarat</button><button data-t="no">Belum memenuhi</button></div>'+
+        '<button class="btn ghost sm" id="cCsv" type="button">Unduh CSV</button></div>'+
+      '<div class="tbl-wrap"><table id="cTable" class="tgt"><thead><tr><th class="rk">Rank</th><th class="sticky">Store</th><th>BU</th><th>AM</th><th>SPA</th><th>PA</th><th>Tgt Sep–Des</th><th>Tgt s/d bln ini</th><th>Akt s/d bln ini</th><th>Ach</th><th>Akt polis</th><th>Growth vs Mei–Agu</th><th>Skor</th><th>Status</th><th>Voucher</th></tr></thead><tbody></tbody><tfoot></tfoot></table></div></section>'+
+    '<div class="cols2"><section class="card"><h2>Leaderboard AM <span class="muted-sm">voucher MAP · 18 pemenang</span></h2><div id="cAm"></div></section>'+
+      '<section class="card"><h2>Leaderboard SPV &amp; RH <span class="muted-sm">best SPV per BU · best RH</span></h2><div id="cSpa"></div></section></div>'+
+    '<section class="card"><h2>Grand Prize — Trip Korea Selatan <span class="muted-sm">simulasi 25 pemenang</span></h2><div id="cGrand" class="grand-grid"></div></section>'+
+    '<section class="card"><h2>Syarat &amp; ketentuan ringkas <span class="muted-sm">QOALA Program Reward 2026</span></h2><ul id="cTc" class="trend-list"></ul></section>';
+}
+function renderCampaign(){
+  var D=campaignData(), T=D.tot, meta=D.meta;
+  var liveNames=D.live.map(function(L){ return ymLabel(L.ym); });
+  var lastLive=liveNames.length?liveNames[liveNames.length-1]:"—";
+  if($("periodSub")) $("periodSub").innerHTML=esc("Periode: Sep–Des 2026 · realisasi s/d "+lastLive)+(LOCK?'<span class="hide-sm">'+esc(" · data terkunci")+'</span>':'');
+  if($("metaLine")) $("metaLine").textContent="Dibuat "+((DATA.meta&&DATA.meta.generated)||"—")+" · target: Target-Campaign-2026.xlsx ("+D.rows.length+" store) · realisasi: Data-raw.xlsx";
+  if(CAMP_CACHE) CAMP_CACHE.live=D.live;
+  if(!D.rows.length){
+    $("cKpis").innerHTML='<div class="kpi"><div class="t">Campaign 2026</div><div class="v">Belum ada target</div></div>';
+    return;
+  }
+  /* ---- KPI ---- */
+  var eligibleAll=D.rows.filter(function(o){return o.eligible;}).length;
+  var actMonth=D.live.length?T.act/liveNames.length:0;
+  $("cKpis").innerHTML=
+    '<div class="kpi"><div class="t">Target campaign Sep–Des</div><div class="v">'+fmtIDR(T.tgt4)+'</div><div class="d flat">'+D.rows.length+' store · '+esc(meta.label||"Campaign 2026")+'</div></div>'+
+    '<div class="kpi"><div class="t">Realisasi s/d '+esc(lastLive)+'</div><div class="v">'+fmtIDR(T.act)+'</div><div class="d flat">target '+esc(liveNames.join(" + "))+' = '+fmtIDR(T.tgtE)+'</div></div>'+
+    '<div class="kpi"><div class="t">Achievement</div><div class="v">'+fmtPctPlain(T.ach)+'</div><div class="d '+(T.ach>=0.9?"up":(T.ach>=0.7?"flat":"down"))+'">syarat T&amp;C ≥ 90%</div></div>'+
+    '<div class="kpi"><div class="t">Growth vs Mei–Agu</div><div class="v">'+fmtPct(T.growth)+'</div><div class="d flat">'+fmtIDR(T.actAvg)+'/bln vs '+fmtIDR(T.baseAvg)+'/bln</div></div>'+
+    '<div class="kpi"><div class="t">Store memenuhi syarat</div><div class="v">'+fmtInt(eligibleAll)+' / '+D.rows.length+'</div><div class="d flat">ach ≥ 90% + minimum polis &amp; revenue</div></div>'+
+    '<div class="kpi"><div class="t">Voucher store (simulasi)</div><div class="v" id="cVoucher">—</div><div class="d flat">kuota '+((meta.winnerSlots||75)*2)+' pemenang (75 per BU)</div></div>';
+  /* ---- progres bulanan ---- */
+  var mb="";
+  D.cm.forEach(function(ym,k){
+    var tg=T.tgtBy[ym]||0, ac=T.actBy[ym];
+    var has=(ac!=null);
+    var pct=tg>0&&has?ac/tg:NaN;
+    mb+='<tr><td><b>'+esc(ymLabel(ym))+'</b></td><td>'+fmtIDR(tg)+'</td><td>'+(has?fmtIDR(ac):'<span class="flat">belum ada data</span>')+'</td>'+
+      '<td>'+(isFinite(pct)?fmtPctPlain(pct):'—')+'</td><td>'+(has?fmtInt(T.polBy[ym]||0):'—')+'</td>'+
+      '<td><div class="bar-track"><div class="bar-fill" style="width:'+(isFinite(pct)?Math.max(1,Math.min(100,pct*100)):0).toFixed(1)+'%"></div></div></td></tr>';
+  });
+  if($("cMonthTable")){
+    $("cMonthTable").querySelector("tbody").innerHTML=mb;
+    $("cMonthTable").querySelector("tfoot").innerHTML='<tr><td><b>TOTAL</b></td><td>'+fmtIDR(T.tgt4)+'</td><td>'+fmtIDR(T.act)+'</td><td>'+fmtPct(T.ach)+'</td><td>'+fmtInt(T.pol)+'</td><td></td></tr>';
+  }
+  if($("cMonthNote")) $("cMonthNote").textContent="Target dari Target-Campaign-2026.xlsx. Bulan yang belum berjalan hanya menampilkan target.";
+  /* ---- per BU ---- */
+  var buKpis="";
+  ["Digiplus","Digimap"].forEach(function(bu){
+    var g=D.rows.filter(function(o){return o.bu===bu;});
+    var tg=g.reduce(function(a,o){return a+o.tgtE;},0), ac=g.reduce(function(a,o){return a+o.act;},0);
+    var el=g.filter(function(o){return o.eligible;}).length;
+    buKpis+='<div class="kpi"><div class="t">'+bu+'</div><div class="v">'+fmtPctPlain(tg>0?ac/tg:0)+'</div><div class="d flat">'+fmtIDR(ac)+' / '+fmtIDR(tg)+' · '+el+'/'+g.length+' layak · kuota '+(meta.winnerSlots||75)+'</div></div>';
+  });
+  if($("cBuKpis")) $("cBuKpis").innerHTML=buKpis;
+  /* ---- tabel store + peringkat voucher ---- */
+  var f=campRowsFiltered().rows;
+  var sortFn={
+    score:function(a,b){return b.score-a.score;},
+    ach:function(a,b){return b.ach-a.ach;},
+    growth:function(a,b){return (b.growth==null?-9:b.growth)-(a.growth==null?-9:a.growth);},
+    act:function(a,b){return b.act-a.act;},
+    tgt:function(a,b){return b.tgt4-a.tgt4;}
+  }[CAMP.sort]||function(a,b){return b.score-a.score;};
+  f.sort(sortFn);
+  /* peringkat & voucher per BU dihitung dari seluruh store BU tsb (bukan hasil filter) */
+  var rankMap={}, voucherMap={}, voucherTotal=0;
+  ["Digiplus","Digimap"].forEach(function(bu){
+    var pool=D.rows.filter(function(o){return o.bu===bu && o.eligible;}).sort(function(a,b){return b.score-a.score;});
+    pool.forEach(function(o,i){
+      var pos=i+1, tier=campTier(CAMP_VOUCHER.store,pos);
+      rankMap[o.t.s]=pos;
+      if(tier){ voucherMap[o.t.s]=tier; voucherTotal+=tier.v; }
+    });
+  });
+  if($("cVoucher")) $("cVoucher").textContent=fmtIDR(voucherTotal);
+  var body=f.map(function(o){
+    var rk=rankMap[o.t.s];
+    var v=voucherMap[o.t.s];
+    return '<tr'+(o.eligible?'':' class="dim"')+'><td class="rk">'+(rk?fmtInt(rk):'—')+'</td>'+
+      '<td><b>'+esc(o.t.s)+'</b></td><td>'+esc(o.bu)+'</td><td>'+esc(clean(o.t.am))+'</td><td>'+esc(clean(o.t.spa))+'</td><td>'+esc(clean(o.t.pa))+'</td>'+
+      '<td>'+fmtIDR(o.tgt4)+'</td><td>'+fmtIDR(o.tgtE)+'</td><td>'+fmtIDR(o.act)+'</td>'+
+      '<td><div class="bar-row mini"><span class="v">'+fmtPctPlain(o.ach)+'</span><div class="bar-track"><div class="bar-fill" style="width:'+Math.max(1,Math.min(100,o.ach*100)).toFixed(1)+'%"></div></div></div></td>'+
+      '<td>'+fmtInt(o.pol)+'</td><td>'+fmtPct(o.growth)+'</td><td>'+(o.score*100).toLocaleString("id-ID",{maximumFractionDigits:1})+'</td>'+
+      '<td>'+(o.eligible?'<span class="pill ok">Layak</span>':'<span class="pill gray">Belum</span>')+'</td>'+
+      '<td>'+(v?fmtIDR(v.v)+' <span class="muted-sm">#'+v.r+'</span>':'—')+'</td></tr>';
+  }).join("");
+  if($("cTable")){
+    $("cTable").querySelector("tbody").innerHTML=body||'<tr><td colspan="15">Tidak ada store yang cocok.</td></tr>';
+    var tgtS=f.reduce(function(a,o){return a+o.tgtE;},0), actS=f.reduce(function(a,o){return a+o.act;},0);
+    var polS=f.reduce(function(a,o){return a+o.pol;},0);
+    $("cTable").querySelector("tfoot").innerHTML='<tr><td></td><td><b>TOTAL · '+f.length+' store</b></td><td></td><td></td><td></td><td></td><td>'+fmtIDR(f.reduce(function(a,o){return a+o.tgt4;},0))+'</td><td>'+fmtIDR(tgtS)+'</td><td>'+fmtIDR(actS)+'</td><td>'+fmtPctPlain(tgtS>0?actS/tgtS:0)+'</td><td>'+fmtInt(polS)+'</td><td></td><td></td><td>'+f.filter(function(o){return o.eligible;}).length+' layak</td><td>'+fmtIDR(f.reduce(function(a,o){var v=voucherMap[o.t.s];return a+(v?v.v:0);},0))+'</td></tr>';
+  }
+  if($("cNote")) $("cNote").textContent="Peringkat dihitung per BU dari store yang memenuhi syarat (ach ≥ 90% + minimum polis/revenue). Skor = 50% achievement + 50% growth. Voucher = simulasi posisi saat ini.";
+  /* ---- AM ---- */
+  var ams=campGroup(D.rows,"am");
+  var amHTML=ams.slice(0,18).map(function(g,i){
+    var tier=campTier(CAMP_VOUCHER.am,i+1);
+    return '<div class="bar-row"><span class="n">'+(i+1)+'. '+esc(g.k)+' <span class="muted-sm">'+g.n+' store</span></span><span class="v">'+fmtPctPlain(g.ach)+' · '+fmtPct(g.growth)+'</span>'+
+      '<div class="bar-track"><div class="bar-fill" style="width:'+Math.max(2,Math.min(100,g.score*100)).toFixed(1)+'%"></div></div>'+
+      '<span class="muted-sm">'+(tier?fmtIDR(tier.v):'—')+'</span></div>';
+  }).join("");
+  if($("cAm")) $("cAm").innerHTML=amHTML+'<p class="muted-sm" style="margin-top:8px">Skor AM = agregat achievement &amp; growth seluruh store campaign di bawahnya.</p>';
+  /* ---- SPV (PA) per BU + RH (SPA) ---- */
+  var spvHTML="";
+  ["Digiplus","Digimap"].forEach(function(bu){
+    var g=campGroup(D.rows.filter(function(o){return o.bu===bu;}),"pa").slice(0,7);
+    spvHTML+='<h3 class="sub-head">Best SPV '+bu+' <span class="muted-sm">7 pemenang · grand prize</span></h3>';
+    spvHTML+=g.map(function(x,i){ return '<div class="bar-row"><span class="n">'+(i+1)+'. '+esc(x.k)+'</span><span class="v">'+fmtPctPlain(x.ach)+'</span><div class="bar-track"><div class="bar-fill" style="width:'+Math.max(2,Math.min(100,x.score*100)).toFixed(1)+'%"></div></div></div>'; }).join("");
+  });
+  var rhs=campGroup(D.rows,"spa").slice(0,5);
+  spvHTML+='<h3 class="sub-head">Best RH <span class="muted-sm">2 pemenang</span></h3>'+
+    rhs.slice(0,3).map(function(x,i){ var tier=campTier(CAMP_VOUCHER.rh,i+1); return '<div class="bar-row"><span class="n">'+(i+1)+'. '+esc(x.k)+'</span><span class="v">'+fmtPctPlain(x.ach)+'</span><div class="bar-track"><div class="bar-fill" style="width:'+Math.max(2,Math.min(100,x.score*100)).toFixed(1)+'%"></div></div><span class="muted-sm">'+(tier?fmtIDR(tier.v):'—')+'</span></div>'; }).join("")+
+    '<p class="muted-sm" style="margin-top:8px">Pemetaan: SPV = PA, RH = SPA (sesuai struktur data dashboard). Kategori HO belum tersedia di data.</p>';
+  if($("cSpa")) $("cSpa").innerHTML=spvHTML;
+  /* ---- grand prize ---- */
+  var grand=[];
+  ["Digiplus","Digimap"].forEach(function(bu){
+    var spv=campGroup(D.rows.filter(function(o){return o.bu===bu;}),"pa").slice(0,7);
+    grand.push({t:"Best SPV "+bu+" (7)",items:spv.map(function(x,i){return (i+1)+". "+x.k;} )});
+  });
+  ["Digiplus","Digimap"].forEach(function(bu){
+    var am=campGroup(D.rows.filter(function(o){return o.bu===bu;}),"am").slice(0,3);
+    grand.push({t:"Best AM "+bu+" (3)",items:am.map(function(x,i){return (i+1)+". "+x.k;} )});
+  });
+  grand.push({t:"Best RH (2)",items:rhs.slice(0,2).map(function(x,i){return (i+1)+". "+x.k;})});
+  grand.push({t:"HO (3)",items:["Belum tersedia di data"]});
+  if($("cGrand")) $("cGrand").innerHTML=grand.map(function(g){
+    return '<div class="grand-card"><div class="gc-t">'+esc(g.t)+'</div><ol>'+g.items.map(function(s,i){return '<li>'+esc(s)+'</li>';}).join("")+'</ol></div>';
+  }).join("");
+  /* ---- T&C ---- */
+  if($("cTc")) $("cTc").innerHTML=[
+    "Periode program <b>September–Desember 2026</b>; berlaku untuk store dengan penjualan minimal <b>90% dari target</b>.",
+    "Peserta: <b>75 store Digimap</b> dan <b>75 store Digiplus</b> (kuota pemenang voucher). Minimum per BU: Digimap <b>100 polis / Rp 100 jt</b>, Digiplus <b>70 polis / Rp 70 jt</b> selama periode.",
+    "Metrik penilaian: <b>pencapaian target</b> dan <b>growth Sep–Des vs Mei–Agu</b>.",
+    "Voucher store per BU: Rp 10 jt (1), Rp 9 jt (1), Rp 8 jt (1), Rp 6 jt (2), Rp 5 jt (3), Rp 4 jt (7), Rp 2,5 jt (60) → total 75 pemenang per BU.",
+    "Voucher AM: Rp 10 jt (1), Rp 8,5 jt (1), Rp 6,5 jt (1), Rp 4,5 jt (3), Rp 3,5 jt (5), Rp 2 jt (7) → 18 pemenang.",
+    "Voucher RH: Rp 8 jt (1), Rp 5,5 jt (2), Rp 4 jt (2) → 5 pemenang.",
+    "Grand Prize: trip Korea Selatan (± April 2027) untuk <b>25 pemenang</b>: Best SPV Digimap 7, Best SPV Digiplus 7, Best AM Digimap 3, Best AM Digiplus 3, Best RH 2, HO 3."
+  ].map(function(s){return "<li>"+s+"</li>";}).join("");
+  /* ---- binding ---- */
+  var cs=$("cSearch");
+  if(cs){ cs.value=CAMP.q; cs.oninput=function(e){ CAMP.q=norm(e.target.value); renderCampaign(); }; }
+  var so=$("cSort");
+  if(so){ so.value=CAMP.sort; so.onchange=function(e){ CAMP.sort=e.target.value; renderCampaign(); }; }
+  ["cBuTabs","cTabTabs"].forEach(function(id){
+    var box=$(id); if(!box) return;
+    var key=(id==="cBuTabs")?"bu":"tab";
+    box.querySelectorAll("button").forEach(function(b){
+      var v=(id==="cBuTabs")?b.dataset.b:b.dataset.t;
+      b.classList.toggle("on",CAMP[key]===v);
+      b.onclick=function(){ CAMP[key]=v; renderCampaign(); };
+    });
+  });
+  var csv=$("cCsv");
+  if(csv) csv.onclick=function(){
+    var head="rank,store,bu,am,spa,pa,target_sep_des,target_sd_bulan,aktual_sd_bulan,ach_pct,polis,growth_pct,skor,layak,voucher\n";
+    var lines=f.map(function(o){
+      var v=voucherMap[o.t.s];
+      return [rankMap[o.t.s]||"",o.t.s,o.bu,o.t.am||"",o.t.spa||"",o.t.pa||"",Math.round(o.tgt4),Math.round(o.tgtE),Math.round(o.act),
+        (o.ach*100).toFixed(1),o.pol,(o.growth==null?"":(o.growth*100).toFixed(1)),(o.score*100).toFixed(1),(o.eligible?"ya":"belum"),v?v.v:""]
+        .map(function(x){ return '"'+String(x).replace(/"/g,'""')+'"'; }).join(",");
+    }).join("\n");
+    dlFile("campaign-2026-"+new Date().toISOString().slice(0,10)+".csv",head+lines,"text/csv;charset=utf-8");
+  };
+}
+
 /* ---- halaman ---- */
 function pageHTML(){
+  if(ROUTE==="campaign") return campaignHTML();
   if(ROUTE==="account") return accountHTML();
   if(ROUTE==="keamanan") return securityHTML();
   if(ROUTE==="best") return bestHTML();
@@ -1496,6 +1802,7 @@ function renderRoute(){
   SHOT=false; RPT=false; document.body.classList.remove("shot-mode");
   var isSet=(ROUTE==="account"||ROUTE==="keamanan");
   document.body.classList.toggle("settings-mode",isSet);
+  document.body.classList.toggle("campaign-mode",ROUTE==="campaign");
   if(isSet){
     var ps=$("periodSub"); if(ps) ps.textContent="Pengaturan akun & keamanan";
     renderSetting();
@@ -1509,7 +1816,7 @@ function renderRoute(){
 /* ================= LOGIN + PEMBATASAN SCOPE =================
    Password disimpan sebagai hash FNV-1a 32-bit (hex) di data/summary.js.
    Ini gerbang akses, bukan keamanan sungguhan: seluruh data tetap ada di file JSON. */
-var USER=null, LOCK=null, BLOCKED=false, ALLOWED_ROUTES=["summary","spa","pa","promotor","best"];
+var USER=null, LOCK=null, BLOCKED=false, ALLOWED_ROUTES=["summary","spa","pa","promotor","best","campaign"];
 function hashPw(s){
   var h=2166136261>>>0; s=String(s==null?"":s);
   for(var i=0;i<s.length;i++){ h=(h^s.charCodeAt(i))>>>0; h=Math.imul(h,16777619)>>>0; }
@@ -1601,7 +1908,7 @@ function roleKind(r){
   return "?";
 }
 function applyUser(u){
-  USER=u||null; LOCK=null; BLOCKED=false; ALLOWED_ROUTES=["summary","spa","pa","promotor","best"];
+  USER=u||null; LOCK=null; BLOCKED=false; ALLOWED_ROUTES=["summary","spa","pa","promotor","best","campaign"];
   var warn="";
   if(USER){
     var kind=roleKind(USER.r), want=null, hint="";
@@ -1633,14 +1940,14 @@ function applyUser(u){
     if(kind!=="admin"){
       if(want){
         LOCK={field:want.field,key:want.key,idx:want.idx,route:want.route,level:want.level,list:want.list,name:clean(DATA[want.list][want.idx])};
-        ALLOWED_ROUTES=["summary",LOCK.route,"best"];
+        ALLOWED_ROUTES=["summary",LOCK.route,"best","campaign"];
         F.am=[]; F.spa=[]; F.pa=[]; F.prom=[];
       }else{
         BLOCKED=true; ALLOWED_ROUTES=[];
         warn="Akses belum dibuka: "+hint+". Demi keamanan data tidak ditampilkan. Perbaiki nama/role di <b>Master_user.xlsx</b>, lalu jalankan refresh data.";
       }
     }else{
-      ALLOWED_ROUTES=["summary","spa","pa","promotor","best","account","keamanan"];
+      ALLOWED_ROUTES=["summary","spa","pa","promotor","best","campaign","account","keamanan"];
     }
   }
   applyAccessUI();
