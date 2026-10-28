@@ -1529,7 +1529,7 @@ function campaignHTML(){
           '<select id="cSort"><option value="score">Urut: Skor (Ach+Growth)</option><option value="ach">Urut: Achievement</option><option value="growth">Urut: Growth</option><option value="act">Urut: Aktual GWP</option><option value="tgt">Urut: Target terbesar</option></select>'+
           '<div class="tabs" id="cTabTabs"><button data-t="all" class="on">Semua</button><button data-t="ok">Memenuhi syarat</button><button data-t="no">Belum memenuhi</button></div>'+
           '<button class="btn ghost sm" id="cCsv" type="button">Unduh CSV</button></div>'+
-        '<div class="tbl-wrap"><table id="cTable" class="tgt camp-tbl"><thead><tr><th class="sticky rk">Rank</th><th class="sticky">Store</th><th>BU</th><th>RH</th><th>AM</th><th>SPA</th><th>PA</th><th>Target Sep–Des</th><th>Target s/d bln ini</th><th>GWP Campaign</th><th>Ach</th><th>Policy Campaign</th><th>Growth vs Mei–Agu</th><th>Skor</th><th>Status</th><th>Voucher</th></tr></thead><tbody></tbody><tfoot></tfoot></table></div>'+
+        '<div class="tbl-wrap"><table id="cTable" class="tgt camp-tbl"><thead><tr><th class="sticky rk">Rank</th><th class="sticky">Store</th><th>BU</th><th>RH</th><th>AM</th><th>SPA</th><th>PA</th><th>Target Sep–Des</th><th>Target s/d bln ini</th><th>GWP Campaign</th><th title="Estimasi GWP akhir campaign = GWP MTD ÷ bulan berjalan × 4">Est Campaign</th><th>Ach</th><th>Policy Campaign</th><th>Growth vs Mei–Agu</th><th>Skor</th><th>Status</th><th>Voucher</th></tr></thead><tbody></tbody><tfoot></tfoot></table></div>'+
       '</div>'+
       '<div id="cTopBody" style="display:none">'+
         '<p class="muted" id="cTopNote" style="margin:0 0 8px"></p>'+
@@ -1686,6 +1686,8 @@ function renderCampaign(){
   if($("cBuKpis")) $("cBuKpis").innerHTML=buKpis;
   /* ---- tabel store + peringkat voucher ---- */
   var f=campRowsFiltered().rows;
+  /* jumlah bulan campaign yang sudah ada realisasinya (Sep..) — untuk proyeksi Est akhir campaign */
+  var nLive=D.live.length||1;
   var sortFn={
     score:function(a,b){return b.score-a.score;},
     ach:function(a,b){return b.ach-a.ach;},
@@ -1716,17 +1718,17 @@ function renderCampaign(){
     var v=voucherMap[o.t.s];
     return '<tr'+(o.eligible?'':' class="dim"')+'><td class="sticky rk">'+(rk?fmtInt(rk):'—')+'</td>'+
       '<td class="sticky"><b>'+esc(o.t.s)+'</b></td><td>'+esc(o.bu)+'</td><td>'+esc(clean(o.t.rh))+'</td><td>'+esc(clean(o.t.am))+'</td><td>'+esc(clean(o.t.spa))+'</td><td>'+esc(clean(o.t.pa))+'</td>'+
-      '<td>'+fmtIDR(o.tgt4)+'</td><td>'+fmtIDR(o.tgtE)+'</td><td>'+fmtIDR(o.act)+'</td>'+
+      '<td>'+fmtIDR(o.tgt4)+'</td><td>'+fmtIDR(o.tgtE)+'</td><td>'+fmtIDR(o.act)+'</td><td>'+fmtIDR(o.act/nLive*4)+'</td>'+
       '<td><div class="bar-row mini"><span class="v">'+fmtPctPlain(o.ach)+'</span><div class="bar-track"><div class="bar-fill" style="width:'+Math.max(1,Math.min(100,o.ach*100)).toFixed(1)+'%"></div></div></div></td>'+
       '<td>'+fmtInt(o.pol)+'</td><td>'+fmtPct(o.growth)+'</td><td>'+(o.score*100).toLocaleString("id-ID",{maximumFractionDigits:1})+'</td>'+
       '<td>'+(o.eligible?'<span class="pill ok">Layak</span>':'<span class="pill gray">Belum</span>')+'</td>'+
       '<td>'+(v?fmtIDR(v.v)+' <span class="muted-sm">#'+v.r+'</span>':'—')+'</td></tr>';
   }).join("");
   if($("cTable")){
-    $("cTable").querySelector("tbody").innerHTML=body||'<tr><td colspan="16">Tidak ada store yang cocok.</td></tr>';
+    $("cTable").querySelector("tbody").innerHTML=body||'<tr><td colspan="17">Tidak ada store yang cocok.</td></tr>';
     var tgtS=f.reduce(function(a,o){return a+o.tgtE;},0), actS=f.reduce(function(a,o){return a+o.act;},0);
     var polS=f.reduce(function(a,o){return a+o.pol;},0);
-    $("cTable").querySelector("tfoot").innerHTML='<tr><td class="sticky rk"></td><td class="sticky"><b>TOTAL · '+f.length+' store</b></td><td></td><td></td><td></td><td></td><td></td><td>'+fmtIDR(f.reduce(function(a,o){return a+o.tgt4;},0))+'</td><td>'+fmtIDR(tgtS)+'</td><td>'+fmtIDR(actS)+'</td><td>'+fmtPctPlain(tgtS>0?actS/tgtS:0)+'</td><td>'+fmtInt(polS)+'</td><td></td><td></td><td>'+f.filter(function(o){return o.eligible;}).length+' layak</td><td>'+fmtIDR(f.reduce(function(a,o){var v=voucherMap[o.t.s];return a+(v?v.v:0);},0))+'</td></tr>';
+    $("cTable").querySelector("tfoot").innerHTML='<tr><td class="sticky rk"></td><td class="sticky"><b>TOTAL · '+f.length+' store</b></td><td></td><td></td><td></td><td></td><td></td><td>'+fmtIDR(f.reduce(function(a,o){return a+o.tgt4;},0))+'</td><td>'+fmtIDR(tgtS)+'</td><td>'+fmtIDR(actS)+'</td><td>'+fmtIDR(actS/nLive*4)+'</td><td>'+fmtPctPlain(tgtS>0?actS/tgtS:0)+'</td><td>'+fmtInt(polS)+'</td><td></td><td></td><td>'+f.filter(function(o){return o.eligible;}).length+' layak</td><td>'+fmtIDR(f.reduce(function(a,o){var v=voucherMap[o.t.s];return a+(v?v.v:0);},0))+'</td></tr>';
   }
   if($("cNote")) $("cNote").textContent="Nomor urut 1,2,3,… mengikuti urutan tampil; store yang memenuhi syarat (ach ≥ 90% + minimum polis/revenue) selalu di atas. Skor = 50% achievement + 50% growth. Voucher = simulasi posisi per BU.";
   /* ---- mode "75 store by %": Target akumulasi Sep–Des vs GWP MTD (tanpa growth/status/skor) ---- */
@@ -1793,9 +1795,11 @@ function renderCampaign(){
   }
   /* ---- AM ---- */
   var ams=campGroup(R,"am");
+  var estTxt=function(tgt,act){ return '<span class="v2">Target Campaign '+fmtIDR(tgt)+' · MTD '+fmtIDR(act)+' · Est '+fmtIDR(act/nLive*4)+'</span>'; };
   var amHTML=ams.slice(0,18).map(function(g,i){
     var tier=campTier(CAMP_VOUCHER.am,i+1);
     return '<div class="bar-row"><span class="n">'+(i+1)+'. '+esc(g.k)+' <span class="muted-sm">'+g.n+' store</span></span><span class="v">'+fmtPctPlain(g.ach)+' · '+fmtPct(g.growth)+'</span>'+
+      estTxt(g.tgt4,g.act)+
       '<div class="bar-track"><div class="bar-fill" style="width:'+Math.max(2,Math.min(100,g.score*100)).toFixed(1)+'%"></div></div>'+
       '<span class="muted-sm">'+(tier?fmtIDR(tier.v):'—')+'</span></div>';
   }).join("");
@@ -1804,6 +1808,7 @@ function renderCampaign(){
   var pas=campGroup(R,"pa");
   var paHTML=pas.slice(0,18).map(function(g,i){
     return '<div class="bar-row"><span class="n">'+(i+1)+'. '+esc(g.k)+' <span class="muted-sm">'+g.n+' store</span></span><span class="v">'+fmtPctPlain(g.ach)+' · '+fmtPct(g.growth)+'</span>'+
+      estTxt(g.tgt4,g.act)+
       '<div class="bar-track"><div class="bar-fill" style="width:'+Math.max(2,Math.min(100,g.score*100)).toFixed(1)+'%"></div></div></div>';
   }).join("");
   if($("cPa")) $("cPa").innerHTML=paHTML+'<p class="muted-sm" style="margin-top:8px">Skor PA = agregat achievement &amp; growth seluruh store campaign di bawahnya.</p>';
@@ -1812,12 +1817,12 @@ function renderCampaign(){
   ["Digiplus","Digimap"].forEach(function(bu){
     var g=R.filter(function(o){return o.bu===bu && o.eligible;}).sort(function(a,b){return b.score-a.score;}).slice(0,7);
     spvHTML+='<div class="spv-sec"><h3 class="sub-head">Best SPV '+bu+' <span class="muted-sm">7 store · grand prize</span></h3>';
-    spvHTML+=g.map(function(o,i){ return '<div class="bar-row"><span class="n">'+(i+1)+'. '+esc(o.t.s)+'</span><span class="v">'+fmtPctPlain(o.ach)+' · '+fmtPct(o.growth)+'</span><div class="bar-track"><div class="bar-fill" style="width:'+Math.max(2,Math.min(100,o.score*100)).toFixed(1)+'%"></div></div></div>'; }).join("")||'<p class="muted-sm">Belum ada store yang memenuhi syarat.</p>';
+    spvHTML+=g.map(function(o,i){ return '<div class="bar-row"><span class="n">'+(i+1)+'. '+esc(o.t.s)+'</span><span class="v">'+fmtPctPlain(o.ach)+' · '+fmtPct(o.growth)+'</span>'+estTxt(o.tgt4,o.act)+'<div class="bar-track"><div class="bar-fill" style="width:'+Math.max(2,Math.min(100,o.score*100)).toFixed(1)+'%"></div></div></div>'; }).join("")||'<p class="muted-sm">Belum ada store yang memenuhi syarat.</p>';
     spvHTML+='</div>';
   });
   var rhs=campGroup(R,"rh");
   spvHTML+='<div class="spv-sec"><h3 class="sub-head">Best RH <span class="muted-sm">5 voucher · grand prize 2</span></h3>'+
-    rhs.slice(0,5).map(function(x,i){ var tier=campTier(CAMP_VOUCHER.rh,i+1); return '<div class="bar-row"><span class="n">'+(i+1)+'. '+esc(x.k)+' <span class="muted-sm">'+x.n+' store</span></span><span class="v">'+fmtPctPlain(x.ach)+'</span><div class="bar-track"><div class="bar-fill" style="width:'+Math.max(2,Math.min(100,x.score*100)).toFixed(1)+'%"></div></div><span class="muted-sm">'+(tier?fmtIDR(tier.v):'—')+'</span></div>'; }).join("")+'</div>'+
+    rhs.slice(0,5).map(function(x,i){ var tier=campTier(CAMP_VOUCHER.rh,i+1); return '<div class="bar-row"><span class="n">'+(i+1)+'. '+esc(x.k)+' <span class="muted-sm">'+x.n+' store</span></span><span class="v">'+fmtPctPlain(x.ach)+'</span>'+estTxt(x.tgt4,x.act)+'<div class="bar-track"><div class="bar-fill" style="width:'+Math.max(2,Math.min(100,x.score*100)).toFixed(1)+'%"></div></div><span class="muted-sm">'+(tier?fmtIDR(tier.v):'—')+'</span></div>'; }).join("")+'</div>'+
     '<p class="muted-sm" style="margin-top:8px">Best SPV = peringkat <b>store</b> per BU (7 store). Best RH = agregat store per RH (kolom RH di Target-Campaign-2026). Kategori HO belum tersedia di data.</p>';
   if($("cSpa")) $("cSpa").innerHTML=spvHTML;
   /* ---- grand prize ---- */
@@ -1876,10 +1881,10 @@ function renderCampaign(){
   });
   var csv=$("cCsv");
   if(csv) csv.onclick=function(){
-    var head="rank,store,bu,rh,am,spa,pa,target_sep_des,target_sd_bulan,aktual_sd_bulan,ach_pct,polis,growth_pct,skor,layak,voucher\n";
+    var head="rank,store,bu,rh,am,spa,pa,target_sep_des,target_sd_bulan,aktual_sd_bulan,est_campaign,ach_pct,polis,growth_pct,skor,layak,voucher\n";
     var lines=f.map(function(o){
       var v=voucherMap[o.t.s];
-      return [dispRank[o.t.s]||"",o.t.s,o.bu,o.t.rh||"",o.t.am||"",o.t.spa||"",o.t.pa||"",Math.round(o.tgt4),Math.round(o.tgtE),Math.round(o.act),
+      return [dispRank[o.t.s]||"",o.t.s,o.bu,o.t.rh||"",o.t.am||"",o.t.spa||"",o.t.pa||"",Math.round(o.tgt4),Math.round(o.tgtE),Math.round(o.act),Math.round(o.act/nLive*4),
         (o.ach*100).toFixed(1),o.pol,(o.growth==null?"":(o.growth*100).toFixed(1)),(o.score*100).toFixed(1),(o.eligible?"ya":"belum"),v?v.v:""]
         .map(function(x){ return '"'+String(x).replace(/"/g,'""')+'"'; }).join(",");
     }).join("\n");

@@ -500,8 +500,9 @@ body.camp-shot #pageBody > *:not(#cShot):not(#cShotExit){display:none}
 .cshot-btn{white-space:nowrap}
 .cshot-card .sub-head:first-child{margin-top:0}
 .cshot-card .sub-head{font-size:17px;margin:16px 0 6px}
-.cshot-card .bar-row{font-size:17px;margin:9px 0;gap:5px 12px}
+.cshot-card .bar-row{font-size:17px;margin:7px 0;gap:4px 12px}
 .cshot-card .bar-row .v{font-size:15px}
+.cshot-card .bar-row .v2{font-size:13.5px}
 .cshot-card .bar-track{height:11px}
 .cshot-card .muted-sm{font-size:14.5px}
 .cshot-card.grand-grid{gap:18px}
