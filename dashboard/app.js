@@ -61,7 +61,7 @@ function activeTargetMonth(){
   for(var i=0;i<months.length;i++){
     var ym=months[i];
     if(!fHit(F.year,ym.slice(0,4))) continue;
-    if(!fHit(F.month,ym.slice(5,7))) continue;
+    if(!fHit(F.month,ym)) continue;
     vis.push(ym);
   }
   if(!vis.length) return def;
@@ -87,13 +87,13 @@ function applyTargetMode(){
 }
 var monthMode="both";
 var TGT = {summary:{q:"",sort:"tg",tab:"all"},spa:{q:"",sort:"tg",tab:"all"},pa:{q:"",sort:"tg",tab:"all"},promotor:{q:"",sort:"tg",tab:"all"}};
-/* ---- pencarian nama (store / PA / promotor / AM) --------------------------
+/* ---- pencarian nama (store / Partnership Associate / promotor / Area Manager) --------------------------
    Kotak "Cari nama" berlaku untuk SELURUH halaman: kartu KPI, tren bulanan/harian,
-   blok peringkat & kontribusi, sampai tabel Target vs Achievement.
+   blok peringkat & kontribusi, sampai tabel Target VS Achievement.
    Haystack per-store dibangun sekali setiap kata kunci berubah supaya passFact
    (dipanggil 148 ribu kali per render) tetap cepat. */
 var SEARCH_Q="", SEARCH_HAY=null, SEARCH_READY=false, searchTimer=null;
-/* Mode laporan (khusus Administrator): sembunyikan kolom PA, Promotor & kolom NoP,
+/* Mode laporan (khusus Administrator): sembunyikan kolom Partnership Associate, Mobile Promoters & kolom NoP,
    tampilkan semua baris tabel supaya mudah di-screenshot. Default mati. */
 var RPT=false, SHOT=false;
 function isAdminUser(){ return !!(USER && roleKind(USER.r)==="admin"); }
@@ -123,8 +123,8 @@ function searchHitText(str){
 var PAGES = {
   summary:{title:"Summary", scope:null},
   spa:{title:"SPA", scope:"spa", list:"spa", label:"Pilih SPA"},
-  pa:{title:"PA", scope:"pa", list:"pa", label:"Pilih PA"},
-  promotor:{title:"Promotor", scope:"prom", list:"prom", label:"Pilih Promotor"},
+  pa:{title:"Partnership Associate", scope:"pa", list:"pa", label:"Pilih Partnership Associate"},
+  promotor:{title:"Mobile Promoters", scope:"prom", list:"prom", label:"Pilih Mobile Promoters"},
   best:{title:"Best Achievement", scope:null, eyebrow:"SALES MONITORING · BEST ACHIEVEMENT"},
   campaign:{title:"Campaign 2026", scope:null, eyebrow:"SALES MONITORING · CAMPAIGN 2026"},
   account:{title:"Account", scope:null, eyebrow:"SETTING · ACCOUNT", admin:1},
@@ -132,13 +132,13 @@ var PAGES = {
 };
 var BREAKS = {
   summary:[{id:"B1",t:"Top produk",map:"byProd"},{id:"B2",t:"Top store",map:"byStore"},{id:"B3",t:"Rank By Partnership Associate",map:"byPa"}],
-  spa:[{id:"B1",t:"Rank By Area Manager",map:"byAm"},{id:"B2",t:"Rank By Partnership Associate",map:"byPa"},{id:"B3",t:"Rank By Promoters",map:"byProm"},
+  spa:[{id:"B1",t:"Rank By Area Manager",map:"byAm"},{id:"B2",t:"Rank By Partnership Associate",map:"byPa"},{id:"B3",t:"Rank By Mobile Promoters",map:"byProm"},
        {id:"B4",t:"Contribution By Product",map:"byProd",c:1,half:1},
        {id:"B5",t:"Contribution By Tenor",map:"byDurM",c:1,half:1,m:1},
        {id:"B6",t:"Contribution By Brand <span class='muted-sm'>(Apple, Samsung, etc.)</span>",map:"byBrandM",c:1,half:1,m:1},
        {id:"B7",t:"Contribution By Category <span class='muted-sm'>(smartphone, watch, etc.)</span>",map:"byCatM",c:1,half:1,m:1},
        {id:"B8",t:"Contribution By Business Unit <span class='muted-sm'>(Digimap &amp; Digiplus)</span>",sc:1,partners:["Digimap","Digiplus"]}],
-  pa:[{id:"B1",t:"Top produk",map:"byProd"},{id:"B2",t:"Top store",map:"byStore"},{id:"B3",t:"Rank By Promoters",map:"byProm"}],
+  pa:[{id:"B1",t:"Top produk",map:"byProd"},{id:"B2",t:"Top store",map:"byStore"},{id:"B3",t:"Rank By Mobile Promoters",map:"byProm"}],
   promotor:[{id:"B1",t:"Top produk",map:"byProd"},{id:"B2",t:"Top store",map:"byStore"}]
 };
 
@@ -155,7 +155,7 @@ function passFact(f, ignoreYearMonth){
   if(SEARCH_Q && !searchHitStore(f[4])) return false;
   if(!ignoreYearMonth){
     if(!fHit(F.year,ym.slice(0,4))) return false;
-    if(!fHit(F.month,ym.slice(5,7))) return false;
+    if(!fHit(F.month,ym)) return false;
   }
   if(!fHit(F.ins,f[1])) return false;
   if(!fHit(F.part,f[2])) return false;
@@ -212,7 +212,7 @@ function visibleMonths(){
   for(var i=0;i<DATA.months.length;i++){
     var ym=DATA.months[i];
     if(!fHit(F.year,ym.slice(0,4))) continue;
-    if(!fHit(F.month,ym.slice(5,7))) continue;
+    if(!fHit(F.month,ym)) continue;
     out.push(i);
   }
   return out;
@@ -467,15 +467,15 @@ function renderPartnerScore(b, agg){
   el.innerHTML=h;
 }
 
-/* blok Top AM / Top PA / Top Promotor — mode bulan berjalan: aktual vs target.
-   Dihitung dari baris target yang sama dengan tabel Target vs Achievement,
-   hanya dikelompokkan per AM / PA / Promotor. */
+/* blok Top Area Manager / Top Partnership Associate / Top Mobile Promoters — mode bulan berjalan: aktual vs target.
+   Dihitung dari baris target yang sama dengan tabel Target VS Achievement,
+   hanya dikelompokkan per Area Manager / Partnership Associate / Mobile Promoters. */
 function renderAchBreak(b){
   var el=$(b.id); if(!el) return;
   var rd=targetRowData();
   if(!rd||!rd.rows.length){ el.innerHTML='<p class="muted">Tidak ada data target untuk filter ini.</p>'; return; }
   var key = b.map==="byAm"?"am":(b.map==="byPa"?"pa":"pr");
-  var lbl = b.map==="byAm"?"AM":(b.map==="byPa"?"PA":"Promotor");
+  var lbl = b.map==="byAm"?"Area Manager":(b.map==="byPa"?"Partnership Associate":"Mobile Promoters");
   var g={}, skipN=0, skipNop=0;
   rd.rows.forEach(function(t){
     var raw=t[key];
@@ -633,7 +633,7 @@ function msDimItems(list){
    apple-to-apple. Bulan pembanding tetap dihitung walaupun tidak ikut filter
    Tahun/Bulan (mis. filter Bulan = Okt saja):
      MoM = bulan kalender sebelumnya, YoY = bulan yang sama tahun lalu.
-   Filter lain (Insurance/Partner/AM/SPA/PA/Promotor/Produk/Store/Status) tetap dihormati. */
+   Filter lain (Insurance/Partner/Area Manager/SPA/Partnership Associate/Mobile Promoters/Produk/Store/Status) tetap dihormati. */
 function sumMonths(yms){
   var want={}, i;
   for(i=0;i<yms.length;i++){ if(yms[i]) want[yms[i]]={n:0,g:0}; }
@@ -764,7 +764,7 @@ function render(agg){
 function scopeLabel(){
   var v=scopeVal();
   if(v==="ALL") return "";
-  var nm=ROUTE==="spa"?"SPA":ROUTE==="pa"?"PA":"Promotor";
+  var nm=ROUTE==="spa"?"SPA":ROUTE==="pa"?"Partnership Associate":"Mobile Promoters";
   var list=ROUTE==="spa"?DATA.spa:ROUTE==="pa"?DATA.pa:DATA.prom;
   return " · "+nm+" "+clean(list[+v]);
 }
@@ -799,12 +799,12 @@ function renderTrend(agg,vis){
   var tp=topEntries(agg.byProd,1)[0],ts=topEntries(agg.byStore,1)[0],ta=topEntries(agg.byPa,1)[0],tn=topEntries(agg.byPart,1)[0];
   if(tp) items.push("Produk dominan: <b>"+esc(tp.k)+"</b> ("+fmtIDR(tp.g)+", "+fmtInt(tp.n)+" polis).");
   if(ts) items.push("Store dominan: <b>"+esc(ts.k)+"</b> ("+fmtIDR(ts.g)+").");
-  if(ta) items.push("PA dominan: <b>"+esc(ta.k)+"</b> ("+fmtIDR(ta.g)+", "+fmtInt(ta.n)+" polis).");
+  if(ta) items.push("Partnership Associate dominan: <b>"+esc(ta.k)+"</b> ("+fmtIDR(ta.g)+", "+fmtInt(ta.n)+" polis).");
   if(tn) items.push("Partner dominan: <b>"+esc(tn.k)+"</b> ("+fmtIDR(tn.g)+").");
   var st=topEntries(agg.byStatus,3);
   if(st.length) items.push("Status: "+st.map(function(e){return esc(e.k)+" "+(e.n/Math.max(agg.totN,1)*100).toLocaleString("id-ID",{maximumFractionDigits:1})+"%";}).join(" · ")+".");
   if(isFinite(momGt)&&momGt<-0.15) items.push("<b>Perhatian:</b> GWP turun &gt;15% MoM — cek store/produk yang turun pada tabel bulanan.");
-  if(isFinite(yoyGt)&&yoyGt>0.1) items.push("Momentum tahunan positif (>10% YoY) — pertahankan strategi pada produk &amp; PA teratas.");
+  if(isFinite(yoyGt)&&yoyGt>0.1) items.push("Momentum tahunan positif (>10% YoY) — pertahankan strategi pada produk &amp; Partnership Associate teratas.");
   $("trendList").innerHTML=items.map(function(s){return "<li>"+s+"</li>";}).join("");
 }
 
@@ -863,8 +863,8 @@ function targetFilterRows(){
     return true;
   });
 }
-/* aktual per store pada bulan target — dipakai tabel Target vs Achievement DAN
-   blok Top AM / Top PA / Top Promotor supaya angkanya selalu sinkron. */
+/* aktual per store pada bulan target — dipakai tabel Target VS Achievement DAN
+   blok Top Area Manager / Top Partnership Associate / Top Mobile Promoters supaya angkanya selalu sinkron. */
 function targetRowData(){
   if(!DATA.target||!DATA.targetMeta) return null;
   var tm=DATA.targetMeta, tMonth=activeTargetMonth();
@@ -874,10 +874,10 @@ function targetRowData(){
   var elapsed=(DATA.monthLastDay&&DATA.monthLastDay[octIdx])||dim;
   if(elapsed<=0) elapsed=dim;
   var selStore=selNormArr(DATA.store,F.store), selPart=selNormArr(DATA.partner,F.part);
-  /* AM/SPA/PA/Promotor sengaja TIDAK difilter di sini: baris store sudah difilter di
-     targetFilterRows() memakai kolom dari Target.xlsx. Jadi tabel Target vs Achievement dan
-     blok Top AM/PA/Promotor selalu menghasilkan angka yang sama — termasuk untuk polis yang
-     kolom AM/SPA/PA/Promotor-nya kosong di Data-raw. */
+  /* Area Manager/SPA/Partnership Associate/Mobile Promoters sengaja TIDAK difilter di sini: baris store sudah difilter di
+     targetFilterRows() memakai kolom dari Target.xlsx. Jadi tabel Target VS Achievement dan
+     blok Top Area Manager/Partnership Associate/Mobile Promoters selalu menghasilkan angka yang sama — termasuk untuk polis yang
+     kolom Area Manager/SPA/Partnership Associate/Mobile Promoters-nya kosong di Data-raw. */
   function keep(f){
     if(SEARCH_Q && !searchHitStore(f[4])) return false;
     if(!fHit(F.prod,f[3])) return false;
@@ -901,7 +901,7 @@ function targetRowData(){
     if(!box[sn]) box[sn]={n:0,g:0};
     box[sn].n+=f[11]; box[sn].g+=f[10];
   }
-  /* aktual per bulan pada tahun target — untuk tabel "Target per bulan"
+  /* aktual per bulan pada tahun target — untuk tabel "Target Per-Bulan"
      (hanya store yang ada di baris target, supaya sama dengan baris TOTAL tabel) */
   var tRows=targetFilterRows(), tset={};
   tRows.forEach(function(t){ tset[norm(t.s)]=1; });
@@ -1060,7 +1060,7 @@ function renderTarget(){
   var isFiltered=(tMonth!==tm.month);
   var tgtYear=String(tm.month||"").slice(0,4);
   var noTgt=(String(tMonth).slice(0,4)!==tgtYear);
-  $("tgtNote").textContent=(noTgt?("Target belum tersedia untuk "+yLbl+" (Target.xlsx hanya "+tgtYear+") · menampilkan realisasi saja · "):"")+(isFiltered?("Periode mengikuti filter: "):"Periode dikunci ")+yLbl+" · data per tgl "+elapsed+" "+yLbl.split(" ")[0]+" (pace linear "+(pace*100).toLocaleString("id-ID",{maximumFractionDigits:1})+"%) · estimasi EOM = aktual ×"+(dim/elapsed).toLocaleString("id-ID",{maximumFractionDigits:2})+" · baris & kartu mengikuti filter AM/SPA/PA/Promotor/Store/Partner dari Target.xlsx"+(extraActive?" · aktual juga difilter Produk/Insurance/Status (target tetap level store)":"")+" · MoM = est EOM vs realisasi "+(rd&&rd.prevYm?ymLabel(rd.prevYm):"bulan sebelumnya")+" · YoY = est EOM vs realisasi "+(rd&&rd.yoyYm?ymLabel(rd.yoyYm):"bulan sama tahun lalu")+(SEARCH_Q?(" · pencarian \""+SEARCH_Q+"\""):"")+" · "+rows.length+" store tampil."+
+  $("tgtNote").textContent=(noTgt?("Target belum tersedia untuk "+yLbl+" (Target.xlsx hanya "+tgtYear+") · menampilkan realisasi saja · "):"")+(isFiltered?("Periode mengikuti filter: "):"Periode dikunci ")+yLbl+" · data per tgl "+elapsed+" "+yLbl.split(" ")[0]+" (pace linear "+(pace*100).toLocaleString("id-ID",{maximumFractionDigits:1})+"%) · estimasi EOM = aktual ×"+(dim/elapsed).toLocaleString("id-ID",{maximumFractionDigits:2})+" · baris & kartu mengikuti filter Area Manager/SPA/Partnership Associate/Mobile Promoters/Store/Partner dari Target.xlsx"+(extraActive?" · aktual juga difilter Produk/Insurance/Status (target tetap level store)":"")+" · MoM = est EOM vs realisasi "+(rd&&rd.prevYm?ymLabel(rd.prevYm):"bulan sebelumnya")+" · YoY = est EOM vs realisasi "+(rd&&rd.yoyYm?ymLabel(rd.yoyYm):"bulan sama tahun lalu")+(SEARCH_Q?(" · pencarian \""+SEARCH_Q+"\""):"")+" · "+rows.length+" store tampil."+
     (ROUTE==="spa"?(TMODE==="up"&&!isFiltered&&!noTgt?(" · target: UP ("+targetUpCount()+" store punya target up, sisanya target reguler)"):" · target: reguler"):"");
   fr.sort(function(a,b){
     if(st.sort==="estHi") return (isFinite(b.estA)?b.estA:-1)-(isFinite(a.estA)?a.estA:-1);
@@ -1114,7 +1114,7 @@ function renderTarget(){
     '<td>'+((function(){ var n=dayNeed(tG2,aG2); return isFinite(n)?(n<=0?'<span class="flat">—</span>':fmtIDR(n)):'<span class="flat">—</span>'; })())+'</td>'+
     '<td class="gcell">'+growthCell(totRow)+'</td><td class="gcell">'+growthCellYoy(totRow)+'</td>'+
     '<td>'+nDone+' / '+fr.length+' tercapai</td></tr>';
-  /* ---- tabel Target per bulan (Jan–Des tahun target) ---- */
+  /* ---- tabel Target Per-Bulan (Jan–Des tahun target) ---- */
   var msec=$("tgtMonthSec");
   if(msec) msec.hidden=!!(RPT||SHOT);
   if($("tgtMonthTable")&&!RPT&&!SHOT){
@@ -1149,8 +1149,8 @@ function renderTarget(){
   if(SHOT) shotArm(); else shotDim();
 }
 
-/* ================= BEST ACHIEVEMENT (peringkat PA / Promotor) =================
-   Angka diambil dari mesin yang sama dengan tabel Target vs Achievement:
+/* ================= BEST ACHIEVEMENT (peringkat Partnership Associate / Mobile Promoters) =================
+   Angka diambil dari mesin yang sama dengan tabel Target VS Achievement:
    baris target (Target.xlsx) + aktual bulan target (Data-raw.xlsx), setelah
    semua filter & pembatasan scope (LOCK) diterapkan. Jadi total di halaman ini
    selalu sama dengan baris TOTAL tabel tersebut. */
@@ -1163,7 +1163,7 @@ function bestHTML(){
   return '<section class="card" id="bestSec">'+
     '<div class="card-h row"><div><h2>Peringkat — '+lbl+' <span class="muted-sm">data per tgl '+(el0||"—")+'</span></h2>'+
       '<p class="muted" id="bestNote"></p></div>'+
-      '<div class="tabs" id="bestTabs"><button data-k="pa" type="button">By PA</button><button data-k="prom" type="button">By Promotor</button></div></div>'+
+      '<div class="tabs" id="bestTabs"><button data-k="pa" type="button">By Partnership Associate</button><button data-k="prom" type="button">By Mobile Promoters</button></div></div>'+
     '<div class="tgt-controls"><select id="bestSort">'+
       '<option value="ach">Urut: Achievement % tertinggi</option>'+
       '<option value="gap">Urut: Sisa target GWP terbesar</option>'+
@@ -1179,7 +1179,7 @@ function bestGroupRows(rd,kind){
   (rd.rows||[]).forEach(function(t){
     var raw=String((kind==="pa"?(t.pa||""):(t.pr||""))||"").trim();
     var isB=(!raw||isBlankEntry(raw)||norm(raw)==="(kosong)"||raw==="-");
-    var nm=isB?("(Tanpa "+(kind==="pa"?"PA":"Promotor")+")"):raw;
+    var nm=isB?("(Tanpa "+(kind==="pa"?"Partnership Associate":"Mobile Promoters")+")"):raw;
     var k=norm(nm), o=g[k];
     if(!o){ o=g[k]={name:nm,blank:isB,tn:0,tg:0,an:0,ag:0,ns:0,par:{}}; arr.push(o); }
     var a=rd.act[norm(t.s)]||{n:0,g:0};
@@ -1220,17 +1220,17 @@ function renderBest(){
     if(s==="tg") return b.tg-a.tg;
     return (isFinite(b.ach)?b.ach:-1)-(isFinite(a.ach)?a.ach:-1);
   });
-  /* grup tanpa nama (store belum punya PA/Promotor) selalu di bawah */
+  /* grup tanpa nama (store belum punya Partnership Associate/Mobile Promoters) selalu di bawah */
   rows=rows.filter(function(o){ return !o.blank; }).concat(rows.filter(function(o){ return o.blank; }));
   function p1(v){ return isFinite(v)?(v*100).toLocaleString("id-ID",{maximumFractionDigits:1})+"%":"—"; }
   var tG=0,aG=0,tN=0,aN=0,done=0;
   rows.forEach(function(o){ tG+=o.tg; aG+=o.ag; tN+=o.tn; aN+=o.an; if(o.st.t==="Tercapai") done++; });
   var ach=tG>0?aG/tG:(tN>0?aN/tN:NaN);
   var eG=aG*rd.fac, est=tG>0?eG/tG:(tN>0?aN*rd.fac/tN:NaN);
-  var kindTxt=BESTS.kind==="pa"?"PA":"Promotor";
+  var kindTxt=BESTS.kind==="pa"?"Partnership Associate":"Mobile Promoters";
   var nNamed=rows.filter(function(o){ return !o.blank; }).length, nBlank=rows.length-nNamed;
   var tmLbl=ymLabel(rd.tMonth||DATA.targetMeta.month);
-  if(note) note.textContent=tmLbl+" · data per tgl "+rd.elapsed+" · "+nNamed+" "+kindTxt+(nBlank?" (+"+nBlank+" tanpa "+(BESTS.kind==="pa"?"PA":"promotor")+")":"")+" · target "+fmtIDR(tG)+" · aktual "+fmtIDR(aG)+" ("+p1(ach)+") · estimasi "+fmtIDR(eG)+" ("+p1(est)+") · "+done+" tercapai"+(SEARCH_Q?(' · cari "'+SEARCH_Q+'"'):"");
+  if(note) note.textContent=tmLbl+" · data per tgl "+rd.elapsed+" · "+nNamed+" "+kindTxt+(nBlank?" (+"+nBlank+" tanpa "+(BESTS.kind==="pa"?"Partnership Associate":"Mobile Promoters")+")":"")+" · target "+fmtIDR(tG)+" · aktual "+fmtIDR(aG)+" ("+p1(ach)+") · estimasi "+fmtIDR(eG)+" ("+p1(est)+") · "+done+" tercapai"+(SEARCH_Q?(' · cari "'+SEARCH_Q+'"'):"");
   var html="";
   rows.forEach(function(o,i){
     var rk=i+1;
@@ -1240,7 +1240,7 @@ function renderBest(){
     html+='<div class="ba-card'+((rk<=3&&BESTS.sort==="ach"&&!o.blank)?" r"+rk:"")+'">'+
       '<div class="ba-rank">'+(medal?'<span class="ba-medal">'+medal+'</span>':'<span class="ba-no">'+rk+'</span>')+'</div>'+
       '<div class="ba-id"><div class="ba-name" title="'+esc(o.name)+'">'+esc(o.name)+'</div>'+
-        '<div class="ba-sub">'+esc(o.blank?(fmtInt(o.ns)+' store · tanpa '+(BESTS.kind==="pa"?"PA":"promotor")):((BESTS.kind==="pa"?"SPA ":"PA ")+(o.parent||"—")+' · '+fmtInt(o.ns)+' store'))+'</div></div>'+
+        '<div class="ba-sub">'+esc(o.blank?(fmtInt(o.ns)+' store · tanpa '+(BESTS.kind==="pa"?"Partnership Associate":"Mobile Promoters")):((BESTS.kind==="pa"?"SPA ":"Partnership Associate ")+(o.parent||"—")+' · '+fmtInt(o.ns)+' store'))+'</div></div>'+
       '<div class="ba-mid"><span class="bar-track"><span class="bar-fill" style="width:'+w.toFixed(1)+'%"></span>'+
         (we>w?'<span class="ba-estmark" style="left:'+Math.min(99.5,we).toFixed(1)+'%"></span>':'')+'</span>'+
         '<div class="ba-legend"><b>Ach '+p1(o.ach)+'</b><span>Est '+p1(o.est)+'</span></div></div>'+
@@ -1249,7 +1249,7 @@ function renderBest(){
     '</div>';
   });
   list.innerHTML=html;
-  if(foot) foot.textContent="Total di atas hanya store yang punya target (Target.xlsx) dan lolos filter — angkanya sama dengan baris TOTAL pada tabel Target vs Achievement. Estimasi EOM = aktual ×"+rd.fac.toLocaleString("id-ID",{maximumFractionDigits:2})+".";
+  if(foot) foot.textContent="Total di atas hanya store yang punya target (Target.xlsx) dan lolos filter — angkanya sama dengan baris TOTAL pada tabel Target VS Achievement. Estimasi EOM = aktual ×"+rd.fac.toLocaleString("id-ID",{maximumFractionDigits:2})+".";
   var fVals=[F.year,F.month,F.ins,F.part,F.am,F.spa,F.pa,F.prom,F.prod,F.store,F.status];
   var actF=fVals.filter(function(v){return v&&v.length;}).length;
   var nVal=fVals.reduce(function(x,v){return x+(v?v.length:0);},0);
@@ -1329,7 +1329,7 @@ function accountHTML(){
 }
 function renderAccountInfo(){
   if(!USER||!$("accInfo")) return;
-  var scopeTxt = LOCK ? ((LOCK.level===1?"SPA ":"PA ")+LOCK.name) : (BLOCKED?"Tanpa akses":"Semua data (semua SPA)");
+  var scopeTxt = LOCK ? ((LOCK.level===1?"SPA ":"Partnership Associate ")+LOCK.name) : (BLOCKED?"Tanpa akses":"Semua data (semua SPA)");
   var cur=sessList().filter(function(s){ return s.id===sessCurrentId(); })[0]||null;
   var m=lsGet(PW_KEY,{})||{};
   $("accInfo").innerHTML='<div class="kv">'+
@@ -1517,7 +1517,7 @@ function campaignData(){
     if(bmSet[m]){ o.base+=f[10]; o.baseN+=f[11]; }
     else if(cmSet[m]){ o.m[m]=(o.m[m]||0)+f[10]; o.n[m]=(o.n[m]||0)+f[11]; }
   }
-  /* user PA/Promotor hanya melihat store dalam lingkupnya (ditandai o.scope) */
+  /* user Partnership Associate/Mobile Promoters hanya melihat store dalam lingkupnya (ditandai o.scope) */
 
   /* bulan campaign yang sudah ada datanya (mis. Sep & Okt) */
   var live=[];
@@ -1613,19 +1613,19 @@ function campaignHTML(){
       '<button class="btn ghost sm" id="cShotBtn" type="button" style="display:none" title="Tampilkan daftar store dalam beberapa kolom supaya semuanya muat dalam satu tangkapan layar">Mode screenshot</button></div></div>'+
       '<div id="cLeadBody">'+
         '<div class="kpis" id="cBuKpis" style="margin-top:12px"></div>'+
-        '<div class="tgt-controls"><input id="cSearch" type="search" placeholder="Cari store / PA / AM / SPA…">'+
+        '<div class="tgt-controls"><input id="cSearch" type="search" placeholder="Cari store / Partnership Associate / Area Manager / SPA…">'+
           '<select id="cSort"><option value="score">Urut: Skor (Ach+Growth)</option><option value="ach">Urut: Achievement</option><option value="growth">Urut: Growth</option><option value="act">Urut: Aktual GWP</option><option value="tgt">Urut: Target terbesar</option></select>'+
           '<div class="tabs" id="cTabTabs"><button data-t="all" class="on">Semua</button><button data-t="ok">Memenuhi syarat</button><button data-t="no">Belum memenuhi</button></div>'+
           '<button class="btn ghost sm" id="cCsv" type="button">Unduh CSV</button></div>'+
-        '<div class="tbl-wrap"><table id="cTable" class="tgt camp-tbl"><thead><tr><th class="sticky rk">Rank</th><th class="sticky">Store</th><th>BU</th><th>RH</th><th>AM</th><th>SPA</th><th>PA</th><th>Target Sep–Des</th><th>Target s/d bln ini</th><th>GWP Campaign</th><th title="Estimasi GWP akhir campaign = GWP MTD ÷ bulan berjalan × 4">Est Campaign</th><th>Ach</th><th>Policy Campaign</th><th>Growth vs Mei–Agu</th><th>Skor</th><th>Status</th><th>Voucher</th></tr></thead><tbody></tbody><tfoot></tfoot></table></div>'+
+        '<div class="tbl-wrap"><table id="cTable" class="tgt camp-tbl"><thead><tr><th class="sticky rk">Rank</th><th class="sticky">Store</th><th>BU</th><th>RH</th><th>Area Manager</th><th>SPA</th><th>Partnership Associate</th><th>Target Sep–Des</th><th>Target s/d bln ini</th><th>GWP Campaign</th><th title="Estimasi GWP akhir campaign = GWP MTD ÷ bulan berjalan × 4">Est Campaign</th><th>Ach</th><th>Policy Campaign</th><th>Growth vs Mei–Agu</th><th>Skor</th><th>Status</th><th>Voucher</th></tr></thead><tbody></tbody><tfoot></tfoot></table></div>'+
       '</div>'+
       '<div id="cTopBody" style="display:none">'+
         '<p class="muted" id="cTopNote" style="margin:0 0 8px"></p>'+
-        '<div class="tbl-wrap"><table id="cTopTable" class="tgt camp-tbl"><thead><tr><th class="sticky rk">Rank</th><th class="sticky">Store</th><th>RH</th><th>AM</th><th>SPA</th><th>PA</th><th>Target Sep–Des</th><th>GWP MTD</th><th>Ach %</th></tr></thead><tbody></tbody><tfoot></tfoot></table></div>'+
+        '<div class="tbl-wrap"><table id="cTopTable" class="tgt camp-tbl"><thead><tr><th class="sticky rk">Rank</th><th class="sticky">Store</th><th>RH</th><th>Area Manager</th><th>SPA</th><th>Partnership Associate</th><th>Target Sep–Des</th><th>GWP MTD</th><th>Ach %</th></tr></thead><tbody></tbody><tfoot></tfoot></table></div>'+
       '</div></section>'+
     '<div class="cols2">'+
       '<section class="card"><div class="card-h row"><div><h2>Leaderboard by Area Manager</h2></div><button class="btn ghost sm cshot-btn" type="button" data-shot="cAm" title="Tampilkan leaderboard ini dalam satu layar untuk di-screenshot">Mode screenshot</button></div><div id="cAm"></div></section>'+
-      '<section class="card"><div class="card-h row"><div><h2>Leaderboard by PA</h2></div><button class="btn ghost sm cshot-btn" type="button" data-shot="cPa" title="Tampilkan leaderboard ini dalam satu layar untuk di-screenshot">Mode screenshot</button></div><div id="cPa"></div></section>'+
+      '<section class="card"><div class="card-h row"><div><h2>Leaderboard by Partnership Associate</h2></div><button class="btn ghost sm cshot-btn" type="button" data-shot="cPa" title="Tampilkan leaderboard ini dalam satu layar untuk di-screenshot">Mode screenshot</button></div><div id="cPa"></div></section>'+
     '</div>'+
     '<section class="card"><div class="card-h row"><div><h2>Leaderboard by Store &amp; Regional Head</h2></div><button class="btn ghost sm cshot-btn" type="button" data-shot="cSpa" title="Tampilkan leaderboard ini dalam satu layar untuk di-screenshot">Mode screenshot</button></div><div id="cSpa"></div></section>'+
     '<section class="card"><div class="card-h row"><div><h2>Grand Prize (Trip To Korea Selatan) 25 Pemenang By Achievement &amp; Growth</h2></div><button class="btn ghost sm cshot-btn" type="button" data-shot="cGrand" title="Tampilkan grand prize ini dalam satu layar untuk di-screenshot">Mode screenshot</button></div><div id="cGrand" class="grand-grid"></div></section>'+
@@ -1881,7 +1881,7 @@ function renderCampaign(){
       shot.hidden=true; shot.innerHTML=""; shot.style.zoom="";
     }
   }
-  /* ---- AM ---- */
+  /* ---- Area Manager ---- */
   var ams=campGroup(R,"am");
   var estTxt=function(tgt,act){ return '<span class="v2">Target Campaign '+fmtIDR(tgt)+' · MTD '+fmtIDR(act)+' · Est '+fmtIDR(act/nLive*4)+'</span>'; };
   var amHTML=ams.slice(0,18).map(function(g,i){
@@ -1891,15 +1891,15 @@ function renderCampaign(){
       '<div class="bar-track"><div class="bar-fill" style="width:'+Math.max(2,Math.min(100,g.score*100)).toFixed(1)+'%"></div></div>'+
       '<span class="muted-sm">'+(tier?fmtIDR(tier.v):'—')+'</span></div>';
   }).join("");
-  if($("cAm")) $("cAm").innerHTML=amHTML+'<p class="muted-sm" style="margin-top:8px">Skor AM = agregat achievement &amp; growth seluruh store campaign di bawahnya.</p>';
-  /* ---- PA ---- */
+  if($("cAm")) $("cAm").innerHTML=amHTML+'<p class="muted-sm" style="margin-top:8px">Skor Area Manager = agregat achievement &amp; growth seluruh store campaign di bawahnya.</p>';
+  /* ---- Partnership Associate ---- */
   var pas=campGroup(R,"pa");
   var paHTML=pas.slice(0,18).map(function(g,i){
     return '<div class="bar-row"><span class="n">'+(i+1)+'. '+esc(g.k)+' <span class="muted-sm">'+g.n+' store</span></span><span class="v">'+fmtPctPlain(g.ach)+' · '+fmtPct(g.growth)+'</span>'+
       estTxt(g.tgt4,g.act)+
       '<div class="bar-track"><div class="bar-fill" style="width:'+Math.max(2,Math.min(100,g.score*100)).toFixed(1)+'%"></div></div></div>';
   }).join("");
-  if($("cPa")) $("cPa").innerHTML=paHTML+'<p class="muted-sm" style="margin-top:8px">Skor PA = agregat achievement &amp; growth seluruh store campaign di bawahnya.</p>';
+  if($("cPa")) $("cPa").innerHTML=paHTML+'<p class="muted-sm" style="margin-top:8px">Skor Partnership Associate = agregat achievement &amp; growth seluruh store campaign di bawahnya.</p>';
   /* ---- Best SPV (per BU, berbasis store) + Best RH (kolom RH) ---- */
   var spvHTML="";
   ["Digiplus","Digimap"].forEach(function(bu){
@@ -1921,7 +1921,7 @@ function renderCampaign(){
   });
   ["Digiplus","Digimap"].forEach(function(bu){
     var am=campGroup(R.filter(function(o){return o.bu===bu;}),"am").slice(0,3);
-    grand.push({t:"Best AM "+bu+" (3)",items:am.map(function(x,i){return (i+1)+". "+x.k;} )});
+    grand.push({t:"Best Area Manager "+bu+" (3)",items:am.map(function(x,i){return (i+1)+". "+x.k;} )});
   });
   grand.push({t:"Best RH (2)",items:rhs.slice(0,2).map(function(x,i){return (i+1)+". "+x.k;})});
   grand.push({t:"HO (3)",items:["Belum tersedia di data"]});
@@ -1937,7 +1937,7 @@ function renderCampaign(){
   });
   ["Digiplus","Digimap"].forEach(function(bu){
     var am=campGroup(R.filter(function(o){return o.bu===bu;}),"am").sort(function(a,b){return b.ach-a.ach;}).slice(0,3);
-    grandAch.push({t:"Best AM "+bu+" (3)",items:am.map(function(x,i){return (i+1)+". "+x.k;} )});
+    grandAch.push({t:"Best Area Manager "+bu+" (3)",items:am.map(function(x,i){return (i+1)+". "+x.k;} )});
   });
   var rhsAch=campGroup(R,"rh").sort(function(a,b){return b.ach-a.ach;}).slice(0,2);
   grandAch.push({t:"Best RH (2)",items:rhsAch.map(function(x,i){return (i+1)+". "+x.k;})});
@@ -1949,9 +1949,9 @@ function renderCampaign(){
     "Peserta: <b>75 store Digimap</b> dan <b>75 store Digiplus</b> (kuota pemenang voucher). Minimum per BU: Digimap <b>100 polis / Rp 100 jt</b>, Digiplus <b>70 polis / Rp 70 jt</b> selama periode.",
     "Metrik penilaian: <b>pencapaian target</b> dan <b>growth Sep–Des vs Mei–Agu</b>.",
     "Voucher store per BU: Rp 10 jt (1), Rp 9 jt (1), Rp 8 jt (1), Rp 6 jt (2), Rp 5 jt (3), Rp 4 jt (7), Rp 2,5 jt (60) → total 75 pemenang per BU.",
-    "Voucher AM: Rp 10 jt (1), Rp 8,5 jt (1), Rp 6,5 jt (1), Rp 4,5 jt (3), Rp 3,5 jt (5), Rp 2 jt (7) → 18 pemenang.",
+    "Voucher Area Manager: Rp 10 jt (1), Rp 8,5 jt (1), Rp 6,5 jt (1), Rp 4,5 jt (3), Rp 3,5 jt (5), Rp 2 jt (7) → 18 pemenang.",
     "Voucher RH: Rp 8 jt (1), Rp 5,5 jt (2), Rp 4 jt (2) → 5 pemenang.",
-    "Grand Prize: trip Korea Selatan (± April 2027) untuk <b>25 pemenang</b>: Best SPV Digimap 7, Best SPV Digiplus 7, Best AM Digimap 3, Best AM Digiplus 3, Best RH 2, HO 3. Dua simulasi: <b>By Achievement &amp; Growth</b> (skor 50/50) dan <b>by Achievement%</b> (target vs aktual saja)."
+    "Grand Prize: trip Korea Selatan (± April 2027) untuk <b>25 pemenang</b>: Best SPV Digimap 7, Best SPV Digiplus 7, Best Area Manager Digimap 3, Best Area Manager Digiplus 3, Best RH 2, HO 3. Dua simulasi: <b>By Achievement &amp; Growth</b> (skor 50/50) dan <b>by Achievement%</b> (target vs aktual saja)."
   ].map(function(s){return "<li>"+s+"</li>";}).join("");
   /* ---- binding ---- */
   var cs=$("cSearch");
@@ -2000,18 +2000,18 @@ function pageHTML(){
   cards.slice(2).forEach(function(c){ if(c.half) buf.push(c.html); else { flush(); rest+=c.html; } });
   flush();
   var h='<section class="kpis" id="kpis"></section>';
-  h+='<section class="card"><div class="card-h row"><div><h2>Tren bulanan — NoP &amp; GWP</h2><p class="muted">NoP (batang) vs GWP (garis).</p></div>'+
+  h+='<section class="card"><div class="card-h row"><div><h2>Tren Bulanan — NoP &amp; GWP</h2><p class="muted">NoP (batang) vs GWP (garis).</p></div>'+
      '<div class="tabs" id="monthTabs"><button data-m="both" class="on">Keduanya</button><button data-m="nop">NoP</button><button data-m="gwp">GWP</button></div></div>'+
      '<div id="monthlyChart" class="chart"></div><div class="legend"><span><i class="sw bar"></i>NoP</span><span><i class="sw line"></i>GWP (Rp)</span></div></section>';
-  h+='<section class="card"><div class="card-h row"><div><h2>Penjualan harian — <span id="dailyMonth">—</span></h2><p class="muted" id="dailyNote"></p></div></div>'+
+  h+='<section class="card"><div class="card-h row"><div><h2>Penjualan Harian — <span id="dailyMonth">—</span></h2><p class="muted" id="dailyNote"></p></div></div>'+
      '<div id="dailyChart" class="chart"></div><div class="legend"><span><i class="sw bar"></i>NoP</span><span><i class="sw line"></i>GWP (Rp)</span></div>'+
-     '<h3 class="sub-head">Kumulatif NoP — aktual vs pace target</h3><p class="muted" id="cumNote"></p>'+
+     '<h3 class="sub-head">Kumulatif NoP — Aktual VS Pace Target</h3><p class="muted" id="cumNote"></p>'+
      '<div id="cumChart" class="chart"></div><div class="legend"><span><i class="sw line"></i>Kumulatif aktual</span><span id="cumPaceLegend"><i class="sw line dash"></i>Pace target</span></div></section>';
   if(ROUTE==="summary"){
     h+='<div class="cols2"><section class="card"><h2>Perbandingan tahunan</h2><p class="muted">Total NoP &amp; GWP per tahun (mengikuti filter).</p><div id="yearChart" class="chart"></div><div id="yearTable"></div></section>'+
-       '<section class="card trend"><h2>Ringkasan tren</h2><p class="muted">Dihitung otomatis dari data terfilter.</p><div id="trendCards" class="trend-cards"></div><ul id="trendList" class="trend-list"></ul></section></div>';
+       '<section class="card trend"><h2>Ringkasan Tren</h2><p class="muted">Dihitung otomatis dari data terfilter.</p><div id="trendCards" class="trend-cards"></div><ul id="trendList" class="trend-list"></ul></section></div>';
   } else {
-    h+='<section class="card trend"><h2>Ringkasan tren</h2><p class="muted">Dihitung otomatis dari data terfilter.</p><div id="trendCards" class="trend-cards"></div><ul id="trendList" class="trend-list"></ul></section>';
+    h+='<section class="card trend"><h2>Ringkasan Tren</h2><p class="muted">Dihitung otomatis dari data terfilter.</p><div id="trendCards" class="trend-cards"></div><ul id="trendList" class="trend-list"></ul></section>';
   }
   var tmLbl=(DATA.targetMeta&&DATA.targetMeta.month)?ymLabel(DATA.targetMeta.month):"—";
   var pmLbl=(DATA.targetMeta&&DATA.targetMeta.month)?ymLabel(prevYm(DATA.targetMeta.month)).slice(0,3):"bln lalu";
@@ -2021,25 +2021,25 @@ function pageHTML(){
   var el0=elapsedOf();
   var adminBtns="", exitBtn="";
   if(isAdminUser()){
-    adminBtns='<button id="tgtRpt" class="btn ghost sm" type="button" aria-pressed="false" title="Mode laporan: sembunyikan kolom PA, Promotor, dan NoP + tampilkan semua baris supaya mudah di-screenshot">Mode laporan</button>'+
+    adminBtns='<button id="tgtRpt" class="btn ghost sm" type="button" aria-pressed="false" title="Mode laporan: sembunyikan kolom Partnership Associate, Mobile Promoters, dan NoP + tampilkan semua baris supaya mudah di-screenshot">Mode laporan</button>'+
       '<button id="tgtShot" class="btn ghost sm" type="button" aria-pressed="false" title="Mode screenshot: tabel dirapatkan + kartu/tab/kontrol disembunyikan supaya semua store dan baris TOTAL muat dalam satu tangkapan layar">Mode screenshot</button>';
     exitBtn='<button id="shotExit" class="shot-exit" type="button" title="Keluar dari mode screenshot (Esc)">&times; Keluar mode screenshot</button>';
   }
-  /* pemilih target reguler/up — hanya di halaman SPA (permintaan AM: sebagian mau target up) */
+  /* pemilih target reguler/up — hanya di halaman SPA (permintaan Area Manager: sebagian mau target up) */
   var modeCtl="";
   if(ROUTE==="spa"){
     modeCtl='<div class="tabs tmode" id="tgtMode" role="group" aria-label="Pilihan target">'+
       '<button type="button" data-m="reg"'+(TMODE==="reg"?' class="on"':'')+' title="Target reguler (Target.xlsx kolom I)">Target Reguler</button>'+
       '<button type="button" data-m="up"'+(TMODE==="up"?' class="on"':'')+' title="Target up (Target.xlsx kolom J). Store yang belum punya target up tetap memakai target reguler.">Target Up</button></div>';
   }
-  h+='<section class="card" id="tgtSec"><div class="card-h row"><div><h2>Target vs Achievement — <span id="tgtHeadLbl">'+tmLbl+'</span> <span class="muted-sm" id="tgtHeadEl">data per tgl '+(el0||"—")+'</span></h2><p class="muted" id="tgtNote"></p></div>'+
+  h+='<section class="card" id="tgtSec"><div class="card-h row"><div><h2>Target VS Achievement — <span id="tgtHeadLbl">'+tmLbl+'</span> <span class="muted-sm" id="tgtHeadEl">data per tgl '+(el0||"—")+'</span></h2><p class="muted" id="tgtNote"></p></div>'+
      '<div class="tabs" id="tgtTabs"><button data-t="all" class="on">Semua</button><button data-t="behind">Belum 100%</button><button data-t="done">Tercapai</button></div></div>'+
      '<div class="kpis" id="tgtKpis" style="margin-top:12px"></div>'+
-     '<div class="tgt-controls"><input id="tgtSearch" type="search" placeholder="Cari store / PA / promotor…"><span class="muted-sm hide-sm">pencarian berlaku ke seluruh halaman (kartu KPI, tren, blok, tabel)</span>'+modeCtl+'<select id="tgtSort"><option value="estHi">Urut: Estimasi % tertinggi</option><option value="tg">Urut: Target GWP terbesar</option><option value="achLo">Urut: Achievement GWP terendah</option><option value="achHi">Urut: Achievement GWP tertinggi</option><option value="gap">Urut: Selisih GWP terbesar</option></select>'+
+     '<div class="tgt-controls"><input id="tgtSearch" type="search" placeholder="Cari store / Partnership Associate / Mobile Promoters…"><span class="muted-sm hide-sm">pencarian berlaku ke seluruh halaman (kartu KPI, tren, blok, tabel)</span>'+modeCtl+'<select id="tgtSort"><option value="estHi">Urut: Estimasi % tertinggi</option><option value="tg">Urut: Target GWP terbesar</option><option value="achLo">Urut: Achievement GWP terendah</option><option value="achHi">Urut: Achievement GWP tertinggi</option><option value="gap">Urut: Selisih GWP terbesar</option></select>'+
           adminBtns+'</div>'+
      '<div id="shotCap" class="shot-cap" hidden></div>'+
-     '<div class="tbl-wrap tgt-wrap"><table id="tgtTable" class="tgt"><thead><tr><th class="sticky rk">No</th><th class="sticky">Store</th><th>PA</th><th>Promotor</th><th>Tgt NoP</th><th>Akt NoP</th><th>Ach NoP</th><th>Tgt GWP</th><th>Akt GWP</th><th>Ach GWP</th><th>Est NoP</th><th>Est GWP</th><th>Est Ach</th><th title="Target harian = sisa target GWP ÷ sisa hari bulan berjalan. GWP yang harus masuk tiap hari agar target store tercapai.">Target/hari</th><th class="gcol" title="Growth = estimasi akhir bulan (EOM) bulan berjalan vs realisasi '+pmLbl+'">Growth vs <span id="thGrowth">'+pmLbl+'</span></th><th class="gcol" title="YoY = estimasi akhir bulan (EOM) bulan berjalan vs realisasi '+yyLblFull+'">YoY vs <span id="thYoy">'+yyLbl+'</span></th><th>Status</th></tr></thead><tbody></tbody><tfoot></tfoot></table></div></section>'+
-     '<section class="card" id="tgtMonthSec"><div class="card-h row"><div><h2>Target per bulan — '+((DATA.targetMeta&&DATA.targetMeta.month)?DATA.targetMeta.month.slice(0,4):"")+'</h2><p class="muted">Target NoP &amp; GWP tiap bulan dari Target.xlsx vs realisasi, mengikuti filter yang aktif.</p></div></div>'+
+     '<div class="tbl-wrap tgt-wrap"><table id="tgtTable" class="tgt"><thead><tr><th class="sticky rk">No</th><th class="sticky">Store</th><th>Partnership Associate</th><th>Mobile Promoters</th><th>Tgt NoP</th><th>Akt NoP</th><th>Ach NoP</th><th>Tgt GWP</th><th>Akt GWP</th><th>Ach GWP</th><th>Est NoP</th><th>Est GWP</th><th>Est Ach</th><th title="Target harian = sisa target GWP ÷ sisa hari bulan berjalan. GWP yang harus masuk tiap hari agar target store tercapai.">Target/hari</th><th class="gcol" title="Growth = estimasi akhir bulan (EOM) bulan berjalan vs realisasi '+pmLbl+'">Growth vs <span id="thGrowth">'+pmLbl+'</span></th><th class="gcol" title="YoY = estimasi akhir bulan (EOM) bulan berjalan vs realisasi '+yyLblFull+'">YoY vs <span id="thYoy">'+yyLbl+'</span></th><th>Status</th></tr></thead><tbody></tbody><tfoot></tfoot></table></div></section>'+
+     '<section class="card" id="tgtMonthSec"><div class="card-h row"><div><h2>Target Per-Bulan — '+((DATA.targetMeta&&DATA.targetMeta.month)?DATA.targetMeta.month.slice(0,4):"")+'</h2><p class="muted">Target NoP &amp; GWP tiap bulan dari Target.xlsx vs realisasi, mengikuti filter yang aktif.</p></div></div>'+
      '<div class="tbl-wrap"><table id="tgtMonthTable" class="tgt month-tgt"><thead><tr><th>Bulan</th><th>Tgt NoP</th><th>Akt NoP</th><th>Ach NoP</th><th>Tgt GWP</th><th>Akt GWP</th><th>Ach GWP</th></tr></thead><tbody></tbody><tfoot></tfoot></table></div></section>'+exitBtn;
   if(grid1) h+='<div class="cols2">'+grid1+'</div>';
   if(rest) h+=rest;
@@ -2053,7 +2053,7 @@ function pageHTML(){
 function pageHeadHTML(){
   if(ROUTE==="account") return '<div class="pagehead"><h2>Account</h2><span class="muted-sm">Info akun &amp; ubah kata sandi</span></div>';
   if(ROUTE==="keamanan") return '<div class="pagehead"><h2>Keamanan</h2><span class="muted-sm">Riwayat akun yang membuka web</span></div>';
-  if(ROUTE==="best") return '<div class="pagehead"><h2>Best Achievement</h2><span class="muted-sm">Peringkat PA &amp; Promotor berdasarkan pencapaian target GWP</span></div>';
+  if(ROUTE==="best") return '<div class="pagehead"><h2>Best Achievement</h2><span class="muted-sm">Peringkat Partnership Associate &amp; Mobile Promoters berdasarkan pencapaian target GWP</span></div>';
   var p=PAGES[ROUTE];
   if(!p.scope) return '<div class="pagehead"><h2>'+p.title+'</h2></div>';
   if(LOCK && LOCK.route===ROUTE)
@@ -2214,7 +2214,7 @@ function findUser(login){
   for(var i=0;i<us.length;i++){ if(norm(us[i].u)===l) return us[i]; }
   return null;
 }
-/* ---- pemetaan organisasi: PA -> SPA, Promotor -> PA ----
+/* ---- pemetaan organisasi: Partnership Associate -> SPA, Mobile Promoters -> Partnership Associate ----
    Sumber utama Target.xlsx (kolom spa/pa/pr per store), cadangan dari data transaksi. */
 function parentName(kind, idx){
   var list=DATA[kind==="pa"?"pa":"prom"]||[];
@@ -2236,7 +2236,7 @@ function parentName(kind, idx){
   }
   return best;
 }
-/* ---- nama dari Target.xlsx tetap dikenali walau promotor/PA belum punya transaksi ----
+/* ---- nama dari Target.xlsx tetap dikenali walau promotor/Partnership Associate belum punya transaksi ----
    Ditambahkan di belakang supaya indeks dimensi yang dipakai facts tidak bergeser. */
 function mergeTargetDims(){
   var t=(DATA&&DATA.target)||[]; if(!t.length) return;
@@ -2272,21 +2272,21 @@ function applyUser(u){
         var spaName=parentName("pa",paIdx);
         var spaIdx=spaName?findScopeIdx(DATA.spa||[],spaName):-1;
         if(spaIdx>=0) want={level:1,route:"spa",list:"spa",key:"spa",field:7,idx:spaIdx};
-        else hint="SPA induk untuk PA <b>"+esc(USER.n)+"</b> tidak ditemukan";
-      } else hint="nama <b>"+esc(USER.n||USER.u)+"</b> tidak ada di daftar PA";
+        else hint="SPA induk untuk Partnership Associate <b>"+esc(USER.n)+"</b> tidak ditemukan";
+      } else hint="nama <b>"+esc(USER.n||USER.u)+"</b> tidak ada di daftar Partnership Associate";
     }else if(kind==="spa"){
       var si=findScopeIdx(DATA.spa||[],USER.n);
       if(si>=0) want={level:1,route:"spa",list:"spa",key:"spa",field:7,idx:si};
       else hint="nama <b>"+esc(USER.n||USER.u)+"</b> tidak ada di daftar SPA";
     }else if(kind==="prom"){
-      /* Promotor: seluruh data PA-nya (semua promotor & store di PA tsb) */
+      /* Mobile Promoters: seluruh data Partnership Associate-nya (semua promotor & store di Partnership Associate tsb) */
       var prIdx=findScopeIdx(DATA.prom||[],USER.n);
       if(prIdx>=0){
         var paName=parentName("prom",prIdx);
         var paIdx2=paName?findScopeIdx(DATA.pa||[],paName):-1;
         if(paIdx2>=0) want={level:2,route:"pa",list:"pa",key:"pa",field:8,idx:paIdx2};
-        else hint="PA induk untuk promotor <b>"+esc(USER.n)+"</b> tidak ditemukan";
-      } else hint="nama <b>"+esc(USER.n||USER.u)+"</b> tidak ada di daftar Promotor";
+        else hint="Partnership Associate induk untuk promotor <b>"+esc(USER.n)+"</b> tidak ditemukan";
+      } else hint="nama <b>"+esc(USER.n||USER.u)+"</b> tidak ada di daftar Mobile Promoters";
     }else if(kind!=="admin"){
       hint="role <b>"+esc(USER.r||"(kosong)")+"</b> belum dikenali";
     }
@@ -2318,7 +2318,7 @@ function applyAccessUI(){
     if(USER){
       su.hidden=false;
       $("suName").textContent=USER.n||USER.u;
-      $("suRole").textContent=USER.r+(LOCK?(" · "+(LOCK.level===1?"SPA ":"PA ")+LOCK.name):(BLOCKED?" · tanpa akses":" · semua data"));
+      $("suRole").textContent=USER.r+(LOCK?(" · "+(LOCK.level===1?"SPA ":"Partnership Associate ")+LOCK.name):(BLOCKED?" · tanpa akses":" · semua data"));
     } else su.hidden=true;
   }
 }
@@ -2382,7 +2382,7 @@ function init(){
 function startDashboard(){
   var years=[...new Set(DATA.months.map(function(m){return m.slice(0,4);}))].sort();
   msInit("msYear","year",years.map(function(y){return {v:y,t:y};}));
-  msInit("msMonth","month",MON.map(function(m,i){return {v:String(i+1).padStart(2,"0"),t:m};}));
+  msInit("msMonth","month",(DATA.months||[]).map(function(ym){return {v:ym,t:ymLabel(ym)};}));
   msInit("msIns","ins",msDimItems(DATA.insurance));
   msInit("msPart","part",msDimItems(DATA.partner));
   msInit("msAm","am",msDimItems(DATA.am));
