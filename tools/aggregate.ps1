@@ -15,7 +15,7 @@ $tmpUJ  = Join-Path $env:TEMP "opencode\users.json"
 $out = Join-Path $root "dashboard\data\summary.json"
 $js  = Join-Path $root "dashboard\data\summary.js"
 
-# Bulan target yang dipakai sebagai pembanding (sesuai isi Target.xlsx)
+# Bulan target: otomatis = bulan terakhir yang sudah ada datanya (lihat summary.json)
 $tgtMonth = "2026-10"
 
 if (!(Test-Path $src)) { throw "Tidak ketemu: $src" }
@@ -28,10 +28,6 @@ Copy-Item $tmpNew $out -Force
 $extra = ""
 
 if (Test-Path $tgt) {
-  Copy-Item -LiteralPath $tgt -Destination $tmpt -Force
-  Add-Type -Path (Join-Path $root "tools\TargetExport.cs") -ReferencedAssemblies @("System.IO.Compression.FileSystem","System.Xml","System.IO.Compression")
-  Write-Output ([TargetExport]::Run($tmpt, $tmptJ))
-
   # Baca daftar bulan + hari terakhir yang ada datanya (di awal file JSON)
   $head = New-Object System.IO.StreamReader($out)
   $buf = New-Object char[] 262144
@@ -40,6 +36,15 @@ if (Test-Path $tgt) {
   $snip = New-Object string($buf, 0, $n)
   $months = ([regex]::Match($snip, '"months":\[([^\]]*)\]')).Groups[1].Value -replace '"','' -split ','
   $lasts  = ([regex]::Match($snip, '"monthLastDay":\[([^\]]*)\]')).Groups[1].Value -split ','
+  # bulan target otomatis: bulan terakhir yang sudah punya data harian
+  for ($i = $months.Count - 1; $i -ge 0; $i--) {
+    if ($months[$i] -and [int]$lasts[$i] -gt 0) { $tgtMonth = $months[$i]; break }
+  }
+
+  Copy-Item -LiteralPath $tgt -Destination $tmpt -Force
+  Add-Type -Path (Join-Path $root "tools\TargetExport.cs") -ReferencedAssemblies @("System.IO.Compression.FileSystem","System.Xml","System.IO.Compression")
+  Write-Output ([TargetExport]::Run($tmpt, $tmptJ, $tgtMonth))
+
   $idx = [array]::IndexOf($months, $tgtMonth)
   if ($idx -lt 0) { throw "Bulan target $tgtMonth tidak ada di data" }
   $elapsed = [int]$lasts[$idx]
