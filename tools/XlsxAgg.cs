@@ -7,7 +7,7 @@ using System.Xml;
 
 public static class XlsxAgg
 {
-    class Raw { public int a,c,i,j,am,ar,as_,at,au,p; public double gwp,nop; public int ao,ap; public int br,cat,dur; } // gwp = kolom X "after marketing support"
+    class Raw { public int a,c,i,j,am,ar,as_,at,au,p; public double gwp,nop; public int ao,ap; public int br,cat,dur; } // gwp = kolom V "gwp"
     // --- normalisasi nama brand (data mentah campur huruf besar/kecil: APPLE / Apple) ---
     static Dictionary<string,string> _brandMap;
     static Dictionary<string,string> BrandMap(){
@@ -112,9 +112,10 @@ public static class XlsxAgg
                         bool hasX=row.ContainsKey("X")&&row["X"]!="", hasV=row.ContainsKey("V")&&row["V"]!="", hasQ=row.ContainsKey("AQ")&&row["AQ"]!="", hasM=row.ContainsKey("AO")&&row["AO"]!="";
                         if(!hasX&&!hasV&&!hasQ&&!hasM) continue; // lewati baris kosong berformat
                         double d;
-                        // GWP = kolom X "after marketing support" (bukan V "gwp").
-                        // Label di dashboard tetap "GWP" - hanya sumber angkanya yang beda.
-                        if(row.ContainsKey("X")&&double.TryParse(row["X"],System.Globalization.NumberStyles.Any,System.Globalization.CultureInfo.InvariantCulture,out d)) r.gwp=d;
+                        // GWP = kolom V "gwp" (sebelumnya memakai kolom X "after marketing support").
+                        // Bila V kosong, pakai X sebagai cadangan.
+                        if(row.ContainsKey("V")&&double.TryParse(row["V"],System.Globalization.NumberStyles.Any,System.Globalization.CultureInfo.InvariantCulture,out d)) r.gwp=d;
+                        else if(row.ContainsKey("X")&&double.TryParse(row["X"],System.Globalization.NumberStyles.Any,System.Globalization.CultureInfo.InvariantCulture,out d)) r.gwp=d;
                         if(row.ContainsKey("AQ")&&double.TryParse(row["AQ"],System.Globalization.NumberStyles.Any,System.Globalization.CultureInfo.InvariantCulture,out d)) r.nop=d; else r.nop=1;
                         if(row.ContainsKey("AO")&&int.TryParse(row["AO"],out tmp)) r.ao=tmp;
                         if(row.ContainsKey("AP")&&int.TryParse(row["AP"],out tmp)) r.ap=tmp;
