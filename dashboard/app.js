@@ -50,13 +50,39 @@ var TMODE=(function(){ try{ return localStorage.getItem("qoala.tmode")==="up"?"u
 function targetUpCount(){
   return (DATA&&DATA.target?DATA.target:[]).filter(function(t){ return (t.tu||0)>0; }).length;
 }
+/* Bulan target aktif — mengikuti filter Tahun & Bulan:
+   - tepat 1 bulan terpilih  -> bulan itu
+   - beberapa bulan          -> bulan target default (Target.xlsx) kalau ikut terpilih,
+                                kalau tidak bulan terakhir yang terpilih
+   - tanpa filter            -> bulan target default (bulan berjalan) */
+function activeTargetMonth(){
+  var def=(DATA.targetMeta&&DATA.targetMeta.month)||"";
+  var months=DATA.months||[], vis=[];
+  for(var i=0;i<months.length;i++){
+    var ym=months[i];
+    if(!fHit(F.year,ym.slice(0,4))) continue;
+    if(!fHit(F.month,ym.slice(5,7))) continue;
+    vis.push(ym);
+  }
+  if(!vis.length) return def;
+  if(vis.length===1) return vis[0];
+  if(def && vis.indexOf(def)>=0) return def;
+  return vis[vis.length-1];
+}
 function applyTargetMode(){
   var useUp=(TMODE==="up" && ROUTE==="spa");
+  var tMonth=activeTargetMonth(), mi=Math.max(0,(+String(tMonth).slice(5,7)||1)-1);
+  var defMonth=((DATA.targetMeta&&DATA.targetMeta.month)||"");
+  var isDef=(tMonth===defMonth);
+  /* target bulanan hanya ada untuk tahun di Target.xlsx (mis. 2026) */
+  var sameYear=(String(tMonth).slice(0,4)===String(defMonth).slice(0,4));
   (DATA&&DATA.target?DATA.target:[]).forEach(function(t){
     if(t.tnr==null){ t.tnr=t.tn||0; t.tgr=t.tg||0; }
     t.nu=(t.tu>0)?((t.tgr>0)?Math.round(t.tnr*t.tu/t.tgr):Math.round(t.tu/1e6)):0;
-    if(useUp && t.tu>0){ t.tn=t.nu; t.tg=t.tu; }
-    else { t.tn=t.tnr; t.tg=t.tgr; }
+    var tn=sameYear?((t.nm&&t.nm[mi])||0):0, tg=sameYear?((t.tm&&t.tm[mi])||0):0;
+    if(isDef){ tn=t.tnr; tg=t.tgr; }   /* bulan berjalan: pakai nilai default (termasuk target up) */
+    if(useUp && isDef && t.tu>0){ t.tn=t.nu; t.tg=t.tu; }
+    else { t.tn=tn; t.tg=tg; }
   });
 }
 var monthMode="both";
@@ -331,7 +357,7 @@ function renderDaily(){
   for(var d=1;d<=s.last;d++){ labels.push(String(d)); nop.push(s.nop[d]); gwp.push(s.gwp[d]); acc+=s.nop[d]; cumA.push(acc); }
   if($("dailyMonth")) $("dailyMonth").textContent=ymLabel(s.ym);
   dualChart("dailyChart",labels,nop,gwp,monthMode);
-  var elapsed=s.last, dim=s.dim, isTgt=!!(DATA.targetMeta&&DATA.targetMeta.month===s.ym);
+  var elapsed=s.last, dim=s.dim, isTgt=(activeTargetMonth()===s.ym);
   var totN=acc, totG=0; for(var d2=1;d2<=s.last;d2++) totG+=s.gwp[d2];
   var rows=targetFilterRows(), tN=0, tG=0;
   rows.forEach(function(t){ tN+=(t.tn||0); tG+=(t.tg||0); });
@@ -345,7 +371,7 @@ function renderDaily(){
     var lg=$("cumPaceLegend"); if(lg) lg.style.display=useTgt?"":"none";
     cumChart("cumChart",labels,cumA,useTgt?cumT:null);
   }
-  if($("cumNote")) $("cumNote").textContent = (isTgt&&tN>0) ? ("Target "+fmtInt(tN)+" polis pada "+ymLabel(s.ym)+" · pace "+ (tN/dim).toLocaleString("id-ID",{maximumFractionDigits:1}) +" polis/hari · posisi tgl "+elapsed+": aktual "+fmtInt(totN)+" vs pace "+fmtInt(tN*elapsed/dim)+" ("+(totN/Math.max(tN*elapsed/dim,1)*100).toLocaleString("id-ID",{maximumFractionDigits:1})+"%)") : ("Kumulatif sampai tgl "+elapsed+" "+ymLabel(s.ym)+": "+fmtInt(totN)+" polis / "+fmtIDR(totG)+" · perbandingan target hanya untuk bulan "+(DATA.targetMeta?ymLabel(DATA.targetMeta.month):"—")+".");
+  if($("cumNote")) $("cumNote").textContent = (isTgt&&tN>0) ? ("Target "+fmtInt(tN)+" polis pada "+ymLabel(s.ym)+" · pace "+ (tN/dim).toLocaleString("id-ID",{maximumFractionDigits:1}) +" polis/hari · posisi tgl "+elapsed+": aktual "+fmtInt(totN)+" vs pace "+fmtInt(tN*elapsed/dim)+" ("+(totN/Math.max(tN*elapsed/dim,1)*100).toLocaleString("id-ID",{maximumFractionDigits:1})+"%)") : ("Kumulatif sampai tgl "+elapsed+" "+ymLabel(s.ym)+": "+fmtInt(totN)+" polis / "+fmtIDR(totG)+" · perbandingan target tersedia untuk "+ymLabel(activeTargetMonth())+".");
 }
 
 
@@ -472,7 +498,7 @@ function renderAchBreak(b){
     return b2.ag-a.ag;
   });
   var pace=rd.elapsed/rd.dim;
-  var h='<p class="muted ach-note">Bulan berjalan <b>'+ymLabel(DATA.targetMeta.month)+'</b> · aktual s/d tgl '+rd.elapsed+
+  var h='<p class="muted ach-note">'+(rd.tMonth===DATA.targetMeta.month?"Bulan berjalan ":"Periode ")+'<b>'+ymLabel(rd.tMonth||DATA.targetMeta.month)+'</b> · aktual s/d tgl '+rd.elapsed+
         ' · urut % achievement · <b>est</b> = proyeksi akhir bulan (aktual ×'+rd.fac.toLocaleString("id-ID",{maximumFractionDigits:2})+
         ') · batang gelap = pace target '+(pace*100).toLocaleString("id-ID",{maximumFractionDigits:1})+'%'+
         (skipN?(' · '+skipN+' store tanpa '+lbl+' ('+fmtInt(skipNop)+' polis) tidak dihitung'):'')+'</p>';
@@ -654,6 +680,7 @@ function cmpTip(c, kind, isNoP){
 }
 
 function render(agg){
+  applyTargetMode();
   if(ROUTE==="best"){ renderBest(); return; }
   if(ROUTE==="campaign"){ renderCampaign(); return; }
   var vis=visibleMonths();
@@ -731,7 +758,8 @@ function render(agg){
   $("filterCount").textContent=((actF?(actF+" filter aktif"+(nVal>actF?" ("+nVal+" pilihan)":"")):"Tanpa filter")+(SEARCH_Q?(' · cari "'+SEARCH_Q+'"'):""))+" · "+fmtInt(agg.totN)+" polis";
   var sc=scopeLabel();
   $("periodSub").innerHTML=esc((labels.length?("Periode tampil: "+labels[0]+" → "+labels[labels.length-1]):"Periode kosong")+(sc?" · "+sc:""))+'<span class="hide-sm">'+esc(" · Sumber: Data-raw.xlsx ("+fmtInt(DATA.facts.length)+" baris)")+'</span>';
-  $("metaLine").textContent="Dibuat "+(DATA.meta&&DATA.meta.generated?DATA.meta.generated:"")+" · NoP=SUM(NoP) · GWP=SUM(gwp) · Target: "+((DATA.targetMeta&&DATA.targetMeta.source)||"Target.xlsx")+" ("+((DATA.target&&DATA.target.length)||0)+" store, bulan "+((DATA.targetMeta&&DATA.targetMeta.month)||"—")+" s/d tgl "+elapsedOf()+")";
+  var _tmAct=activeTargetMonth(), _miAct=(DATA.months||[]).indexOf(_tmAct), _elAct=(_miAct>=0&&DATA.monthLastDay&&DATA.monthLastDay[_miAct])?DATA.monthLastDay[_miAct]:elapsedOf();
+  $("metaLine").textContent="Dibuat "+(DATA.meta&&DATA.meta.generated?DATA.meta.generated:"")+" · NoP=SUM(NoP) · GWP=SUM(gwp) · Target: "+((DATA.targetMeta&&DATA.targetMeta.source)||"Target.xlsx")+" ("+((DATA.target&&DATA.target.length)||0)+" store, bulan "+(_tmAct||"—")+" s/d tgl "+(_elAct||"—")+")";
 }
 function scopeLabel(){
   var v=scopeVal();
@@ -839,10 +867,11 @@ function targetFilterRows(){
    blok Top AM / Top PA / Top Promotor supaya angkanya selalu sinkron. */
 function targetRowData(){
   if(!DATA.target||!DATA.targetMeta) return null;
-  var tm=DATA.targetMeta, octIdx=DATA.months.indexOf(tm.month);
+  var tm=DATA.targetMeta, tMonth=activeTargetMonth();
+  var octIdx=DATA.months.indexOf(tMonth);
   if(octIdx<0) return null;
-  var dim=tm.daysInMonth||daysInMonthOf(tm.month);
-  var elapsed=(DATA.monthLastDay&&DATA.monthLastDay[octIdx])||tm.lastDay||dim;
+  var dim=daysInMonthOf(tMonth);
+  var elapsed=(DATA.monthLastDay&&DATA.monthLastDay[octIdx])||dim;
   if(elapsed<=0) elapsed=dim;
   var selStore=selNormArr(DATA.store,F.store), selPart=selNormArr(DATA.partner,F.part);
   /* AM/SPA/PA/Promotor sengaja TIDAK difilter di sini: baris store sudah difilter di
@@ -861,7 +890,7 @@ function targetRowData(){
   /* prev = aktual bulan sebelumnya (bulan tepat sebelum bulan target), filter sama
      persis dengan aktual bulan berjalan supaya growth apple-to-apple.
      yoy  = aktual bulan yang sama TAHUN LALU (untuk kartu YoY). */
-  var yoyIdx=DATA.months.indexOf(String(+tm.month.slice(0,4)-1)+tm.month.slice(4));
+  var yoyIdx=DATA.months.indexOf(String(+tMonth.slice(0,4)-1)+tMonth.slice(4));
   var act={}, prev={}, yoy={}, facts=DATA.facts, pIdx=octIdx>0?octIdx-1:-1;
   for(var k=0;k<facts.length;k++){
     var f=facts[k];
@@ -887,7 +916,7 @@ function targetRowData(){
     mAct[mo2].n+=f2[11]; mAct[mo2].g+=f2[10];
   }
   return {octIdx:octIdx,dim:dim,elapsed:elapsed,fac:dim/elapsed,act:act,prev:prev,prevYm:(pIdx>=0?DATA.months[pIdx]:null),
-          yoy:yoy,yoyYm:(yoyIdx>=0?DATA.months[yoyIdx]:null),mAct:mAct,
+          yoy:yoy,yoyYm:(yoyIdx>=0?DATA.months[yoyIdx]:null),mAct:mAct,tMonth:tMonth,
           rows:tRows,extraActive:(!fAll(F.prod)||!fAll(F.ins)||!fAll(F.status))};
 }
 /* ---- growth: estimasi EOM bulan berjalan vs realisasi bulan sebelumnya ---- */
@@ -922,9 +951,12 @@ function reportCaption(){
     if(v&&v!=="Semua") bits.push(lblEl.textContent.trim()+": "+v);
   });
   var tm=DATA.targetMeta||{}, el=elapsedOf();
+  var tMonth=activeTargetMonth();
+  var miT=(DATA.months||[]).indexOf(tMonth);
+  if(miT>=0&&DATA.monthLastDay&&DATA.monthLastDay[miT]) el=DATA.monthLastDay[miT];
   var st=TGT[ROUTE]||{};
   var sl={estHi:"Estimasi % tertinggi",tg:"Target GWP terbesar",achLo:"Achievement GWP terendah",achHi:"Achievement GWP tertinggi",gap:"Selisih GWP terbesar"}[st.sort]||"Target GWP terbesar";
-  return (bits.length?bits.join(" · ")+" · ":"")+"Target: "+(tm.month?ymLabel(tm.month):"—")+" (data per tgl "+(el||"—")+") · urutan: "+sl+(st.q?(' · cari "'+st.q+'"'):"");
+  return (bits.length?bits.join(" · ")+" · ":"")+"Target: "+ymLabel(tMonth)+" (data per tgl "+(el||"—")+") · urutan: "+sl+(st.q?(' · cari "'+st.q+'"'):"");
 }
 var shotTimer=null;
 function shotDim(){
@@ -970,11 +1002,15 @@ function renderTarget(){
   if(_cap){ _cap.hidden=!SHOT; _cap.textContent=SHOT?reportCaption():""; }
   var st=TGT[ROUTE];
   var tm=DATA.targetMeta;
+  applyTargetMode();
   var rd=targetRowData();
-  var dim=tm.daysInMonth||daysInMonthOf(tm.month);
-  var elapsed=(rd&&rd.elapsed)||tm.lastDay||dim;
+  var tMonth=(rd&&rd.tMonth)||tm.month;
+  var dim=(rd&&rd.dim)||daysInMonthOf(tMonth);
+  var elapsed=(rd&&rd.elapsed)||dim;
   if(elapsed<=0) elapsed=dim;
   var fac=(rd&&rd.fac)||(dim/elapsed);
+  var hLbl=$("tgtHeadLbl"); if(hLbl) hLbl.textContent=ymLabel(tMonth);
+  var hEl=$("tgtHeadEl"); if(hEl) hEl.textContent="data per tgl "+elapsed;
   var act=(rd&&rd.act)||{};
   var prev=(rd&&rd.prev)||{};
   var extraActive=(rd&&rd.extraActive)||false;
@@ -1010,6 +1046,8 @@ function renderTarget(){
   var yoyN=yN>0?(eNt-yN)/yN:NaN, yoyG=yG>0?(eGt-yG)/yG:NaN;
   function dcls(v){ return !isFinite(v)?"flat":(v>0.0005?"up":(v<-0.0005?"down":"flat")); }
   var pmLbl2=(rd&&rd.prevYm)?ymLabel(rd.prevYm):"—", yyLbl2=(rd&&rd.yoyYm)?ymLabel(rd.yoyYm):"—";
+  var _thG=$("thGrowth"); if(_thG) _thG.textContent=(rd&&rd.prevYm)?ymLabel(rd.prevYm).slice(0,3):"bln lalu";
+  var _thY=$("thYoy"); if(_thY) _thY.textContent=(rd&&rd.yoyYm)?ymLabel(rd.yoyYm).slice(0,3):"thn lalu";
   $("tgtKpis").innerHTML=
     '<div class="kpi"><div class="t">Ach NoP (tgl '+elapsed+')</div><div class="v">'+(isFinite(achN)?(achN*100).toLocaleString("id-ID",{maximumFractionDigits:1})+"%":"—")+'</div><div class="d flat">'+fmtInt(aN)+' / '+fmtInt(tN)+'</div></div>'+
     '<div class="kpi"><div class="t">Ach GWP (tgl '+elapsed+')</div><div class="v">'+(isFinite(achG)?(achG*100).toLocaleString("id-ID",{maximumFractionDigits:1})+"%":"—")+'</div><div class="d flat">'+fmtIDR(aG)+' / '+fmtIDR(tG)+'</div></div>'+
@@ -1018,9 +1056,12 @@ function renderTarget(){
     '<div class="kpi"><div class="t">MoM NoP &middot; <span class="muted-sm">vs '+pmLbl2+'</span></div><div class="v '+dcls(momN)+'">'+fmtPct(momN)+'</div><div class="d '+dcls(momG)+'">GWP '+fmtPct(momG)+'</div></div>'+
     '<div class="kpi"><div class="t">YoY NoP &middot; <span class="muted-sm">vs '+yyLbl2+'</span></div><div class="v '+dcls(yoyN)+'">'+fmtPct(yoyN)+'</div><div class="d '+dcls(yoyG)+'">GWP '+fmtPct(yoyG)+'</div></div>';
   var pace=elapsed/dim;
-  var yLbl=ymLabel(tm.month);
-  $("tgtNote").textContent="Periode dikunci "+yLbl+" · data per tgl "+elapsed+" "+yLbl.split(" ")[0]+" (pace linear "+(pace*100).toLocaleString("id-ID",{maximumFractionDigits:1})+"%) · estimasi EOM = aktual ×"+(dim/elapsed).toLocaleString("id-ID",{maximumFractionDigits:2})+" · baris & kartu mengikuti filter AM/SPA/PA/Promotor/Store/Partner dari Target.xlsx"+(extraActive?" · aktual juga difilter Produk/Insurance/Status (target tetap level store)":"")+" · MoM = est EOM vs realisasi "+(rd&&rd.prevYm?ymLabel(rd.prevYm):"bulan sebelumnya")+" · YoY = est EOM vs realisasi "+(rd&&rd.yoyYm?ymLabel(rd.yoyYm):"bulan sama tahun lalu")+(SEARCH_Q?(" · pencarian \""+SEARCH_Q+"\""):"")+" · "+rows.length+" store tampil."+
-    (ROUTE==="spa"?(TMODE==="up"?(" · target: UP ("+targetUpCount()+" store punya target up, sisanya target reguler)"):" · target: reguler"):"");
+  var yLbl=ymLabel(tMonth);
+  var isFiltered=(tMonth!==tm.month);
+  var tgtYear=String(tm.month||"").slice(0,4);
+  var noTgt=(String(tMonth).slice(0,4)!==tgtYear);
+  $("tgtNote").textContent=(noTgt?("Target belum tersedia untuk "+yLbl+" (Target.xlsx hanya "+tgtYear+") · menampilkan realisasi saja · "):"")+(isFiltered?("Periode mengikuti filter: "):"Periode dikunci ")+yLbl+" · data per tgl "+elapsed+" "+yLbl.split(" ")[0]+" (pace linear "+(pace*100).toLocaleString("id-ID",{maximumFractionDigits:1})+"%) · estimasi EOM = aktual ×"+(dim/elapsed).toLocaleString("id-ID",{maximumFractionDigits:2})+" · baris & kartu mengikuti filter AM/SPA/PA/Promotor/Store/Partner dari Target.xlsx"+(extraActive?" · aktual juga difilter Produk/Insurance/Status (target tetap level store)":"")+" · MoM = est EOM vs realisasi "+(rd&&rd.prevYm?ymLabel(rd.prevYm):"bulan sebelumnya")+" · YoY = est EOM vs realisasi "+(rd&&rd.yoyYm?ymLabel(rd.yoyYm):"bulan sama tahun lalu")+(SEARCH_Q?(" · pencarian \""+SEARCH_Q+"\""):"")+" · "+rows.length+" store tampil."+
+    (ROUTE==="spa"?(TMODE==="up"&&!isFiltered&&!noTgt?(" · target: UP ("+targetUpCount()+" store punya target up, sisanya target reguler)"):" · target: reguler"):"");
   fr.sort(function(a,b){
     if(st.sort==="estHi") return (isFinite(b.estA)?b.estA:-1)-(isFinite(a.estA)?a.estA:-1);
     if(st.sort==="achLo") return (isFinite(a.achG)?a.achG:-1)-(isFinite(b.achG)?b.achG:-1);
@@ -1049,7 +1090,7 @@ function renderTarget(){
   }
   fr.forEach(function(r,i){
     var nd=dayNeed(r.tg,r.ag);
-    html+='<tr><td class="sticky rk">'+(i+1)+'</td><td class="sticky" title="'+esc(r.s)+'">'+esc(r.s)+'</td><td>'+esc(r.pa)+'</td><td>'+esc(r.pr)+'</td><td>'+fmtInt(r.tn)+'</td><td>'+fmtInt(r.an)+'</td><td>'+achCell(r.achN)+'</td><td>'+fmtIDR(r.tg)+'</td><td>'+fmtIDR(r.ag)+'</td><td>'+achCell(r.achG)+'</td><td>'+fmtInt(r.eN)+'</td><td>'+fmtIDR(r.eG)+'</td><td>'+achCell(r.estA)+'</td><td>'+(isFinite(nd)?(nd<=0?'<span class="flat">—</span>':fmtIDR(nd)):'<span class="flat">—</span>')+'</td><td class="gcell">'+growthCell(r)+'</td><td class="gcell">'+growthCellYoy(r)+'</td><td><span class="pill '+r.st.c+'">'+r.st.t+'</span></td></tr>';
+    html+='<tr><td class="sticky rk">'+(i+1)+'</td><td class="sticky" title="'+esc(r.s)+'">'+esc(r.s)+'</td><td>'+esc(r.pa)+'</td><td>'+esc(r.pr)+'</td><td>'+(r.tn>0?fmtInt(r.tn):'<span class="flat">—</span>')+'</td><td>'+fmtInt(r.an)+'</td><td>'+achCell(r.achN)+'</td><td>'+(r.tg>0?fmtIDR(r.tg):'<span class="flat">—</span>')+'</td><td>'+fmtIDR(r.ag)+'</td><td>'+achCell(r.achG)+'</td><td>'+fmtInt(r.eN)+'</td><td>'+fmtIDR(r.eG)+'</td><td>'+achCell(r.estA)+'</td><td>'+(isFinite(nd)?(nd<=0?'<span class="flat">—</span>':fmtIDR(nd)):'<span class="flat">—</span>')+'</td><td class="gcell">'+growthCell(r)+'</td><td class="gcell">'+growthCellYoy(r)+'</td><td><span class="pill '+r.st.c+'">'+r.st.t+'</span></td></tr>';
   });
   tb.innerHTML=html;
   /* ---- baris TOTAL / grand total dari baris yang sedang tampil ---- */
@@ -1066,8 +1107,8 @@ function renderTarget(){
               yyN:yN2>0?(eN2-yN2)/yN2:NaN,yn:yN2,yyG:yG2>0?(eG2-yG2)/yG2:NaN,yg:yG2};
   if(!tfEl){ tfEl=document.createElement("tfoot"); $("tgtTable").appendChild(tfEl); }
   tfEl.innerHTML='<tr class="totrow"><td class="sticky rk"></td><td class="sticky">TOTAL &middot; '+fr.length+' store</td><td></td><td></td>'+
-    '<td>'+fmtInt(tN2)+'</td><td>'+fmtInt(aN2)+'</td><td>'+achCell(achN2)+'</td>'+
-    '<td>'+fmtIDR(tG2)+'</td><td>'+fmtIDR(aG2)+'</td><td>'+achCell(achG2)+'</td>'+
+    '<td>'+(tN2>0?fmtInt(tN2):'<span class="flat">—</span>')+'</td><td>'+fmtInt(aN2)+'</td><td>'+achCell(achN2)+'</td>'+
+    '<td>'+(tG2>0?fmtIDR(tG2):'<span class="flat">—</span>')+'</td><td>'+fmtIDR(aG2)+'</td><td>'+achCell(achG2)+'</td>'+
     '<td>'+fmtInt(eN2)+'</td><td>'+fmtIDR(eG2)+'</td>'+
     '<td>'+achCell(est2)+'</td>'+
     '<td>'+((function(){ var n=dayNeed(tG2,aG2); return isFinite(n)?(n<=0?'<span class="flat">—</span>':fmtIDR(n)):'<span class="flat">—</span>'; })())+'</td>'+
@@ -1086,7 +1127,7 @@ function renderTarget(){
       for(var i=0;i<12;i++){ tG12[i]+=a[i]||0; tN12[i]+=b[i]||0; }
     });
     var mActM=(rd&&rd.mAct)||{};
-    var mBody="", sTG=0,sTN=0,sAG=0,sAN=0, moNow=+tm.month.slice(5,7);
+    var mBody="", sTG=0,sTN=0,sAG=0,sAN=0, moNow=(tMonth.slice(0,4)===String(yrT))?(+tMonth.slice(5,7)):(-1);
     for(var mo=1;mo<=12;mo++){
       var ymM=yrT+"-"+("0"+mo).slice(-2);
       var miM=DATA.months.indexOf(ymM);
@@ -1095,7 +1136,7 @@ function renderTarget(){
       var tgm=tG12[mo-1]||0, tnm=tN12[mo-1]||0;
       if(tgm<=0&&tnm<=0&&!(hasM&&(aM.n||aM.g))) continue;
       sTG+=tgm; sTN+=tnm; if(hasM){ sAG+=aM.g; sAN+=aM.n; }
-      mBody+='<tr'+(mo===moNow?' class="cur"':'')+'><td><b>'+esc(ymLabel(ymM))+'</b>'+(mo===moNow?' <span class="pill gray">berjalan</span>':'')+'</td>'+
+      mBody+='<tr'+(mo===moNow?' class="cur"':'')+'><td><b>'+esc(ymLabel(ymM))+'</b>'+(mo===moNow?(ymM===tm.month?' <span class="pill gray">berjalan</span>':' <span class="pill gray">dipilih</span>'):'')+'</td>'+
         '<td>'+fmtInt(tnm)+'</td><td>'+(hasM?fmtInt(aM.n):'<span class="flat">—</span>')+'</td><td>'+(hasM?achCell(tnm>0?aM.n/tnm:NaN):'<span class="flat">—</span>')+'</td>'+
         '<td>'+fmtIDR(tgm)+'</td><td>'+(hasM?fmtIDR(aM.g):'<span class="flat">belum ada data</span>')+'</td><td>'+(hasM?achCell(tgm>0?aM.g/tgm:NaN):'<span class="flat">—</span>')+'</td></tr>';
     }
@@ -1116,8 +1157,9 @@ function renderTarget(){
 var BESTS={kind:"pa",sort:"ach"};
 function bestHTML(){
   var tm=DATA.targetMeta||{};
-  var lbl=tm.month?ymLabel(tm.month):"—";
-  var el0=elapsedOf();
+  var _aTm=activeTargetMonth(), _aMi=(DATA.months||[]).indexOf(_aTm);
+  var lbl=ymLabel(_aTm);
+  var el0=(_aMi>=0&&DATA.monthLastDay&&DATA.monthLastDay[_aMi])?DATA.monthLastDay[_aMi]:elapsedOf();
   return '<section class="card" id="bestSec">'+
     '<div class="card-h row"><div><h2>Peringkat — '+lbl+' <span class="muted-sm">data per tgl '+(el0||"—")+'</span></h2>'+
       '<p class="muted" id="bestNote"></p></div>'+
@@ -1159,6 +1201,7 @@ function bestGroupRows(rd,kind){
 }
 function renderBest(){
   var list=$("bestList"); if(!list) return;
+  applyTargetMode();
   var tabs=$("bestTabs");
   if(tabs) tabs.querySelectorAll("button").forEach(function(b){ b.classList.toggle("on",b.dataset.k===BESTS.kind); });
   var so=$("bestSort"); if(so) so.value=BESTS.sort;
@@ -1186,7 +1229,7 @@ function renderBest(){
   var eG=aG*rd.fac, est=tG>0?eG/tG:(tN>0?aN*rd.fac/tN:NaN);
   var kindTxt=BESTS.kind==="pa"?"PA":"Promotor";
   var nNamed=rows.filter(function(o){ return !o.blank; }).length, nBlank=rows.length-nNamed;
-  var tmLbl=ymLabel(DATA.targetMeta.month);
+  var tmLbl=ymLabel(rd.tMonth||DATA.targetMeta.month);
   if(note) note.textContent=tmLbl+" · data per tgl "+rd.elapsed+" · "+nNamed+" "+kindTxt+(nBlank?" (+"+nBlank+" tanpa "+(BESTS.kind==="pa"?"PA":"promotor")+")":"")+" · target "+fmtIDR(tG)+" · aktual "+fmtIDR(aG)+" ("+p1(ach)+") · estimasi "+fmtIDR(eG)+" ("+p1(est)+") · "+done+" tercapai"+(SEARCH_Q?(' · cari "'+SEARCH_Q+'"'):"");
   var html="";
   rows.forEach(function(o,i){
@@ -1989,13 +2032,13 @@ function pageHTML(){
       '<button type="button" data-m="reg"'+(TMODE==="reg"?' class="on"':'')+' title="Target reguler (Target.xlsx kolom I)">Target Reguler</button>'+
       '<button type="button" data-m="up"'+(TMODE==="up"?' class="on"':'')+' title="Target up (Target.xlsx kolom J). Store yang belum punya target up tetap memakai target reguler.">Target Up</button></div>';
   }
-  h+='<section class="card" id="tgtSec"><div class="card-h row"><div><h2>Target vs Achievement — '+tmLbl+' <span class="muted-sm">data per tgl '+(el0||"—")+'</span></h2><p class="muted" id="tgtNote"></p></div>'+
+  h+='<section class="card" id="tgtSec"><div class="card-h row"><div><h2>Target vs Achievement — <span id="tgtHeadLbl">'+tmLbl+'</span> <span class="muted-sm" id="tgtHeadEl">data per tgl '+(el0||"—")+'</span></h2><p class="muted" id="tgtNote"></p></div>'+
      '<div class="tabs" id="tgtTabs"><button data-t="all" class="on">Semua</button><button data-t="behind">Belum 100%</button><button data-t="done">Tercapai</button></div></div>'+
      '<div class="kpis" id="tgtKpis" style="margin-top:12px"></div>'+
      '<div class="tgt-controls"><input id="tgtSearch" type="search" placeholder="Cari store / PA / promotor…"><span class="muted-sm hide-sm">pencarian berlaku ke seluruh halaman (kartu KPI, tren, blok, tabel)</span>'+modeCtl+'<select id="tgtSort"><option value="estHi">Urut: Estimasi % tertinggi</option><option value="tg">Urut: Target GWP terbesar</option><option value="achLo">Urut: Achievement GWP terendah</option><option value="achHi">Urut: Achievement GWP tertinggi</option><option value="gap">Urut: Selisih GWP terbesar</option></select>'+
           adminBtns+'</div>'+
      '<div id="shotCap" class="shot-cap" hidden></div>'+
-     '<div class="tbl-wrap tgt-wrap"><table id="tgtTable" class="tgt"><thead><tr><th class="sticky rk">No</th><th class="sticky">Store</th><th>PA</th><th>Promotor</th><th>Tgt NoP</th><th>Akt NoP</th><th>Ach NoP</th><th>Tgt GWP</th><th>Akt GWP</th><th>Ach GWP</th><th>Est NoP</th><th>Est GWP</th><th>Est Ach</th><th title="Target harian = sisa target GWP ÷ sisa hari bulan berjalan. GWP yang harus masuk tiap hari agar target store tercapai.">Target/hari</th><th class="gcol" title="Growth = estimasi akhir bulan (EOM) bulan berjalan vs realisasi '+pmLbl+'">Growth vs '+pmLbl+'</th><th class="gcol" title="YoY = estimasi akhir bulan (EOM) bulan berjalan vs realisasi '+yyLblFull+'">YoY vs '+yyLbl+'</th><th>Status</th></tr></thead><tbody></tbody><tfoot></tfoot></table></div></section>'+
+     '<div class="tbl-wrap tgt-wrap"><table id="tgtTable" class="tgt"><thead><tr><th class="sticky rk">No</th><th class="sticky">Store</th><th>PA</th><th>Promotor</th><th>Tgt NoP</th><th>Akt NoP</th><th>Ach NoP</th><th>Tgt GWP</th><th>Akt GWP</th><th>Ach GWP</th><th>Est NoP</th><th>Est GWP</th><th>Est Ach</th><th title="Target harian = sisa target GWP ÷ sisa hari bulan berjalan. GWP yang harus masuk tiap hari agar target store tercapai.">Target/hari</th><th class="gcol" title="Growth = estimasi akhir bulan (EOM) bulan berjalan vs realisasi '+pmLbl+'">Growth vs <span id="thGrowth">'+pmLbl+'</span></th><th class="gcol" title="YoY = estimasi akhir bulan (EOM) bulan berjalan vs realisasi '+yyLblFull+'">YoY vs <span id="thYoy">'+yyLbl+'</span></th><th>Status</th></tr></thead><tbody></tbody><tfoot></tfoot></table></div></section>'+
      '<section class="card" id="tgtMonthSec"><div class="card-h row"><div><h2>Target per bulan — '+((DATA.targetMeta&&DATA.targetMeta.month)?DATA.targetMeta.month.slice(0,4):"")+'</h2><p class="muted">Target NoP &amp; GWP tiap bulan dari Target.xlsx vs realisasi, mengikuti filter yang aktif.</p></div></div>'+
      '<div class="tbl-wrap"><table id="tgtMonthTable" class="tgt month-tgt"><thead><tr><th>Bulan</th><th>Tgt NoP</th><th>Akt NoP</th><th>Ach NoP</th><th>Tgt GWP</th><th>Akt GWP</th><th>Ach GWP</th></tr></thead><tbody></tbody><tfoot></tfoot></table></div></section>'+exitBtn;
   if(grid1) h+='<div class="cols2">'+grid1+'</div>';
