@@ -532,3 +532,65 @@ body.camp-shot .cshot-exit{display:inline-flex;align-items:center;gap:6px;positi
   background:#1c1917;color:#fff;border:0;border-radius:999px;padding:8px 14px;font:inherit;font-size:12.5px;font-weight:800;
   cursor:pointer;box-shadow:0 6px 18px rgba(0,0,0,.25);transition:opacity .3s}
 body.camp-shot .cshot-exit.dim{opacity:0;pointer-events:none}
+
+/* ---- Summary personal (akun Mobile Promoters / Partnership Associate / SPA) ---- */
+.ps-hero{display:flex;gap:24px;justify-content:space-between;align-items:center;flex-wrap:wrap;
+  background:linear-gradient(135deg,#fffdf8 0%,#fbefd9 100%)}
+.ps-hero-l{min-width:0}
+.ps-eyebrow{font-size:11px;letter-spacing:.14em;font-weight:800;color:var(--brand-dark);text-transform:uppercase}
+.ps-hello{margin:6px 0 4px;font-size:26px;letter-spacing:-.02em}
+.ps-hero-r{text-align:right;min-width:190px}
+.ps-big{font-size:42px;font-weight:800;line-height:1;letter-spacing:-.03em;color:var(--navy)}
+.ps-big small{display:block;font-size:11px;font-weight:700;color:var(--muted);margin-top:8px;text-transform:uppercase;letter-spacing:.08em}
+.ps-hero-r .pill{margin-top:10px}
+.ps-chart{display:flex;flex-direction:column;gap:11px;margin-top:10px}
+.ps-bar-row{display:grid;grid-template-columns:120px minmax(0,1fr) 132px;gap:12px;align-items:center}
+.ps-bar-l{font-size:12.5px;font-weight:700;color:#44403c}
+.ps-bar-track{background:#f2ece1;border-radius:999px;height:18px;overflow:hidden}
+.ps-bar-fill{height:100%;border-radius:999px;transition:width .4s ease}
+.ps-bar-fill.tg{background:#d6cdbd}
+.ps-bar-fill.acv{background:var(--brand)}
+.ps-bar-fill.est{background:var(--brand);opacity:.45}
+.ps-bar-v{font-size:12.5px;font-weight:800;text-align:right;font-variant-numeric:tabular-nums}
+.ps-pcts{display:grid;gap:9px;margin-top:10px;padding-top:12px;border-top:1px dashed var(--line)}
+.ps-pct{display:grid;grid-template-columns:120px minmax(0,1fr) 74px;gap:12px;align-items:center}
+.ps-pct>span{font-size:12.5px;font-weight:700;color:#44403c}
+.ps-pct-track{background:#f2ece1;border-radius:999px;height:11px;overflow:hidden}
+.ps-pct-track i{display:block;height:100%;border-radius:999px;background:var(--brand)}
+.ps-pct-track i.ok{background:#15803d}
+.ps-pct-track i.warn{background:var(--brand)}
+.ps-pct-track i.bad{background:#be123c}
+.ps-pct>b{font-size:12.5px;font-weight:800;text-align:right;font-variant-numeric:tabular-nums}
+.kpis.ps-tiles{grid-template-columns:repeat(3,minmax(0,1fr))}
+.ps-motiv{display:flex;gap:14px;align-items:flex-start;border-left:4px solid var(--brand);background:#fffdf6}
+.ps-motiv-ico{font-size:22px;line-height:1}
+.ps-motiv h3{margin:0 0 6px;font-size:15px}
+.ps-motiv p{margin:0;line-height:1.6;font-size:13.5px;color:#44403c}
+.ps-motiv p b{color:var(--navy)}
+.ps-tbl td,.ps-tbl th{font-size:12.5px}
+@media(max-width:900px){
+  .kpis.ps-tiles{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .ps-bar-row,.ps-pct{grid-template-columns:96px minmax(0,1fr) 96px}
+  .ps-hello{font-size:22px}
+  .ps-big{font-size:34px}
+  .ps-hero-r{text-align:left}
+}
+@media(max-width:560px){
+  .kpis.ps-tiles{grid-template-columns:minmax(0,1fr)}
+  .ps-bar-row,.ps-pct{grid-template-columns:minmax(0,1fr);gap:4px}
+  .ps-bar-v,.ps-pct>b{text-align:left}
+}
+.ps-tbl td.ps-store{font-weight:700;max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ps-tbl td{vertical-align:middle}
+.ps-mini{display:block;font-size:10.5px;font-weight:800;color:var(--muted);margin-top:1px;font-variant-numeric:tabular-nums}
+.ps-mini.ok{color:#15803d}.ps-mini.warn{color:var(--brand-dark)}.ps-mini.bad{color:#be123c}
+.ps-tbl th{font-size:11.5px}
+table.tgt.ps-tbl{min-width:0;width:100%;table-layout:fixed}
+table.tgt.ps-tbl th:nth-child(1){width:32%}
+table.tgt.ps-tbl th:nth-child(2){width:16%}
+table.tgt.ps-tbl th:nth-child(3){width:19%}
+table.tgt.ps-tbl th:nth-child(4){width:19%}
+table.tgt.ps-tbl th:nth-child(5){width:14%}
+table.tgt.ps-tbl th,table.tgt.ps-tbl td{padding-left:8px;padding-right:8px;text-align:right}
+table.tgt.ps-tbl th:nth-child(1),table.tgt.ps-tbl td:nth-child(1){text-align:left}
+table.tgt.ps-tbl tfoot td{position:static}

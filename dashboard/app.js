@@ -681,6 +681,7 @@ function cmpTip(c, kind, isNoP){
 
 function render(agg){
   applyTargetMode();
+  if(ROUTE==="summary" && SELF){ renderPersonal(); return; }
   if(ROUTE==="best"){ renderBest(); return; }
   if(ROUTE==="campaign"){ renderCampaign(); return; }
   var vis=visibleMonths();
@@ -1983,8 +1984,156 @@ function renderCampaign(){
   });
 }
 
+/* ================= SUMMARY PERSONAL (akun ter-scope) =================
+   Mobile Promoters / Partnership Associate / SPA melihat ringkasan coverage-nya
+   sendiri di halaman Summary: Target GWP · Acv GWP · %Acv · Est GWP · %Est ·
+   Target/hari, plus kalimat motivasi & saran yang dihitung dari data. */
+function psRoleLabel(){
+  return SELF.kind==="prom"?"Mobile Promoters":(SELF.kind==="pa"?"Partnership Associate":"SPA");
+}
+function psParent(){
+  if(!SELF) return "";
+  if(SELF.kind==="prom") return clean(parentName("prom",SELF.idx)||"");
+  if(SELF.kind==="pa") return clean(parentName("pa",SELF.idx)||"");
+  return "";
+}
+function psPct(v){ return isFinite(v)?(v*100).toLocaleString("id-ID",{maximumFractionDigits:1})+"%":"—"; }
+function psAchCell(v){
+  if(!isFinite(v)) return '<span class="flat">—</span>';
+  var p=Math.max(0,Math.min(100,v*100));
+  return '<span class="ach"><span class="bar-track"><span class="bar-fill" style="display:block;width:'+p.toFixed(1)+'%"></span></span>'+(v*100).toLocaleString("id-ID",{maximumFractionDigits:1})+'%</span>';
+}
+function psData(){
+  if(!SELF) return null;
+  var rd=targetRowData(); if(!rd) return null;
+  var key=SELF.field, nm=norm(SELF.name), rows=[];
+  (rd.rows||[]).forEach(function(t){
+    if(norm(t[key]||"")!==nm) return;
+    var a=rd.act[norm(t.s)]||{n:0,g:0};
+    var tg=t.tg||0, tn=t.tn||0;
+    var eG=a.g*rd.fac, eN=a.n*rd.fac;
+    rows.push({s:t.s,tg:tg,tn:tn,ag:a.g,an:a.n,
+      ach:tg>0?a.g/tg:(tn>0?a.n/tn:NaN),
+      eG:eG,eN:eN,est:tg>0?eG/tg:(tn>0?eN/tn:NaN)});
+  });
+  var tot={tg:0,tn:0,ag:0,an:0,n:rows.length};
+  rows.forEach(function(r){ tot.tg+=r.tg; tot.tn+=r.tn; tot.ag+=r.ag; tot.an+=r.an; });
+  tot.eG=tot.ag*rd.fac; tot.eN=tot.an*rd.fac;
+  tot.ach=tot.tg>0?tot.ag/tot.tg:(tot.tn>0?tot.an/tot.tn:NaN);
+  tot.est=tot.tg>0?tot.eG/tot.tg:(tot.tn>0?tot.eN/tot.tn:NaN);
+  tot.sisa=Math.max(0,(rd.dim||0)-(rd.elapsed||0));
+  tot.need=Math.max(0,tot.tg-tot.ag);
+  tot.perDay=tot.sisa>0?tot.need/tot.sisa:0;
+  tot.asp=tot.an>0?tot.ag/tot.an:0;
+  return {rows:rows,tot:tot,rd:rd};
+}
+function psMotiv(d){
+  var t=d.tot, sisa=t.sisa;
+  if(!(t.tg>0)) return "Target bulan ini belum tersedia untuk coverage kamu. Fokus jaga kualitas penjualan dan lengkapi data store.";
+  var polis=t.asp>0?Math.round(t.perDay/t.asp):0;
+  var out=[];
+  if(isFinite(t.est)&&t.est>=1){
+    out.push("<b>Mantap!</b> Estimasi kamu <b>"+psPct(t.est)+"</b> — sudah di atas 100%. Pertahankan minimal <b>"+fmtIDR(t.perDay)+"</b>/hari"+(polis?" (≈ "+fmtInt(polis)+" polis)":"")+" selama "+sisa+" hari terakhir supaya tetap aman.");
+  }else{
+    out.push("<b>Ayo semangat!</b> Sisa <b>"+sisa+" hari</b> lagi. Kamu butuh <b>"+fmtIDR(t.perDay)+"</b>/hari"+(polis?" (≈ "+fmtInt(polis)+" polis/hari)":"")+" supaya estimasi menyentuh 100% (sekarang "+psPct(t.est)+").");
+  }
+  var worst=null, gap=0;
+  d.rows.forEach(function(r){ var g=r.tg-r.ag; if(g>gap){ gap=g; worst=r; } });
+  if(worst&&gap>0) out.push("Fokus ke <b>"+esc(worst.s)+"</b> — gap "+fmtIDR(gap)+" (ach "+psPct(worst.ach)+").");
+  var zero=d.rows.filter(function(r){ return r.ag<=0 && r.tg>0; });
+  if(zero.length) out.push(zero.length+" store belum ada penjualan bulan ini: <b>"+esc(zero.slice(0,3).map(function(r){return r.s;}).join(", "))+(zero.length>3?", …":"")+"</b>.");
+  var best=null;
+  d.rows.forEach(function(r){ if(isFinite(r.est)&&(!best||r.est>best.est)) best=r; });
+  if(best&&best.est>0.8) out.push("Jaga momentum <b>"+esc(best.s)+"</b> (est "+psPct(best.est)+") — bisa jadi contoh best practice untuk store lain.");
+  return out.join(" ");
+}
+function personalHTML(){
+  return '<section class="card ps-hero">'+
+      '<div class="ps-hero-l">'+
+        '<div class="ps-eyebrow">Pencapaian Saya · <span id="psMonth">—</span></div>'+
+        '<h2 class="ps-hello">Halo, <span id="psName">—</span> 👋</h2>'+
+        '<p class="muted" id="psSub"></p>'+
+      '</div>'+
+      '<div class="ps-hero-r"><div class="ps-big"><span id="psEst">—</span><small>Estimasi GWP (EOM)</small></div><div id="psBadge"></div></div>'+
+    '</section>'+
+    '<section class="card"><div class="card-h row"><div><h2>Target VS Aktual VS Estimasi</h2><p class="muted">GWP bulan berjalan · estimasi EOM = aktual × hari dalam bulan ÷ hari berjalan</p></div></div><div id="psChart" class="ps-chart"></div></section>'+
+    '<section class="kpis ps-tiles" id="psTiles"></section>'+
+    '<section class="card ps-motiv" id="psMotiv"></section>'+
+    '<section class="card"><div class="card-h row"><div><h2>Store coverage</h2><p class="muted" id="psStoreNote"></p></div></div>'+
+      '<div class="tbl-wrap"><table id="psTable" class="tgt ps-tbl"><thead><tr><th>Store</th><th>Target GWP</th><th>Acv GWP · %Acv</th><th>Est GWP · %Est</th><th>Target/hari</th></tr></thead><tbody></tbody><tfoot></tfoot></table></div></section>';
+}
+function renderPersonal(){
+  var d=psData();
+  var tb=$("psTable");
+  if(!d){
+    if($("psSub")) $("psSub").textContent="Data target belum tersedia untuk akun ini.";
+    if($("psMotiv")) $("psMotiv").innerHTML="";
+    if(tb){ tb.querySelector("tbody").innerHTML='<tr><td colspan="7">Belum ada data.</td></tr>'; }
+    return;
+  }
+  var t=d.tot, rd=d.rd, m=rd.tMonth||DATA.targetMeta.month;
+  var par=psParent();
+  if($("psMonth")) $("psMonth").textContent=ymLabel(m);
+  if($("psName")) $("psName").textContent=(USER&&(USER.n||USER.u))||SELF.name;
+  var rel=par?((SELF.kind==="prom"?"PA ":"SPA ")+par):"";
+  if($("psSub")) $("psSub").innerHTML=esc(psRoleLabel()+(rel?(" · "+rel):"")+" · "+t.n+" store dalam coverage · data per tgl "+rd.elapsed+" "+ymLabel(m).split(" ")[0]);
+  if($("psEst")) $("psEst").textContent=psPct(t.est);
+  var badge=$("psBadge");
+  if(badge){
+    var ok=isFinite(t.est)&&t.est>=1, mid=isFinite(t.est)&&t.est>=0.7;
+    badge.innerHTML='<span class="pill '+(ok?"p-green":(mid?"p-amber":"p-red"))+'">'+(ok?"Aman":(mid?"Hampir tercapai":"Perlu kejar"))+'</span>';
+  }
+  if($("periodSub")) $("periodSub").innerHTML=esc("Pencapaian coverage "+psRoleLabel()+" "+SELF.name+" · periode "+ymLabel(m)+" (data per tgl "+rd.elapsed+")");
+  if($("metaLine")) $("metaLine").textContent="Dibuat "+((DATA.meta&&DATA.meta.generated)||"—")+" · sumber: Data-raw.xlsx + Target.xlsx · estimasi EOM = aktual ×"+rd.fac.toLocaleString("id-ID",{maximumFractionDigits:2});
+  /* diagram: 3 batang + 2 progres */
+  var max=Math.max(t.tg,t.eG,t.ag,1);
+  function bar(lbl,val,cls){
+    var w=Math.max(0,Math.min(100,val/max*100));
+    return '<div class="ps-bar-row"><span class="ps-bar-l">'+lbl+'</span><div class="ps-bar-track"><div class="ps-bar-fill '+cls+'" style="width:'+w.toFixed(1)+'%"></div></div><span class="ps-bar-v">'+fmtIDR(val)+'</span></div>';
+  }
+  function pctRow(lbl,v){
+    var w=isFinite(v)?Math.max(0,Math.min(100,v*100)):0;
+    var cls=isFinite(v)?(v>=1?"ok":(v>=0.7?"warn":"bad")):"na";
+    return '<div class="ps-pct"><span>'+lbl+'</span><div class="ps-pct-track"><i class="'+cls+'" style="width:'+w.toFixed(1)+'%"></i></div><b>'+psPct(v)+'</b></div>';
+  }
+  if($("psChart")) $("psChart").innerHTML=bar("Target GWP",t.tg,"tg")+bar("Acv GWP",t.ag,"acv")+bar("Est GWP",t.eG,"est")+
+    '<div class="ps-pcts">'+pctRow("%Acv",t.ach)+pctRow("%Est",t.est)+'</div>';
+  /* 6 kartu ringkas */
+  function tile(title,val,sub){ return '<div class="kpi"><div class="t">'+title+'</div><div class="v">'+val+'</div><div class="d flat">'+sub+'</div></div>'; }
+  if($("psTiles")) $("psTiles").innerHTML=
+    tile("Target GWP",fmtIDR(t.tg),"bulan "+ymLabel(m))+
+    tile("Acv GWP",fmtIDR(t.ag),fmtInt(t.an)+" polis")+
+    tile("% Acv",psPct(t.ach),t.tn>0?(fmtInt(t.an)+" / "+fmtInt(t.tn)+" polis"):"")+
+    tile("Est GWP (EOM)",fmtIDR(t.eG),fmtInt(t.eN)+" polis")+
+    tile("% Est",psPct(t.est),t.est>=1?"aman":"di bawah target")+
+    tile("Target/hari",t.sisa>0?fmtIDR(t.perDay):"—",t.sisa>0?(t.sisa+" hari tersisa"):"bulan selesai");
+  if($("psMotiv")) $("psMotiv").innerHTML='<div class="ps-motiv-ico">💡</div><div><h3>Motivasi &amp; saran</h3><p>'+psMotiv(d)+'</p></div>';
+  /* tabel store coverage */
+  if(tb){
+    var rows=d.rows.slice().sort(function(a,b){
+      var x=isFinite(a.est)?a.est:9, y=isFinite(b.est)?b.est:9;
+      if(x!==y) return x-y;
+      return b.tg-a.tg;
+    });
+    function valCell(v,pct){
+      var cls=isFinite(pct)?(pct>=1?"ok":(pct>=0.7?"warn":"bad")):"";
+      return fmtIDR(v)+'<span class="ps-mini '+cls+'">'+(isFinite(pct)?psPct(pct):"—")+'</span>';
+    }
+    var body=rows.map(function(r){
+      var nd=t.sisa>0?(r.tg-r.ag)/t.sisa:NaN;
+      return '<tr><td class="ps-store" title="'+esc(r.s)+'">'+esc(r.s)+'</td><td>'+(r.tg>0?fmtIDR(r.tg):'<span class="flat">—</span>')+'</td><td>'+valCell(r.ag,r.ach)+'</td><td>'+valCell(r.eG,r.est)+'</td><td>'+(isFinite(nd)?(nd<=0?'<span class="flat">—</span>':fmtIDR(nd)):'<span class="flat">—</span>')+'</td></tr>';
+    }).join("");
+    tb.querySelector("tbody").innerHTML=body||'<tr><td colspan="5">Tidak ada store pada filter ini.</td></tr>';
+    var tf=tb.querySelector("tfoot");
+    if(!tf){ tf=document.createElement("tfoot"); tb.appendChild(tf); }
+    tf.innerHTML='<tr class="totrow"><td>TOTAL · '+t.n+' store</td><td>'+(t.tg>0?fmtIDR(t.tg):'<span class="flat">—</span>')+'</td><td>'+valCell(t.ag,t.ach)+'</td><td>'+valCell(t.eG,t.est)+'</td><td>'+(t.sisa>0?(t.perDay<=0?'<span class="flat">—</span>':fmtIDR(t.perDay)):'<span class="flat">—</span>')+'</td></tr>';
+    if($("psStoreNote")) $("psStoreNote").textContent="Diurutkan dari estimasi terendah · "+t.n+" store · target harian = sisa target GWP ÷ sisa hari";
+  }
+}
+
 /* ---- halaman ---- */
 function pageHTML(){
+  if(ROUTE==="summary" && SELF) return personalHTML();
   if(ROUTE==="campaign") return campaignHTML();
   if(ROUTE==="account") return accountHTML();
   if(ROUTE==="keamanan") return securityHTML();
@@ -2169,7 +2318,7 @@ function renderRoute(){
 /* ================= LOGIN + PEMBATASAN SCOPE =================
    Password disimpan sebagai hash FNV-1a 32-bit (hex) di data/summary.js.
    Ini gerbang akses, bukan keamanan sungguhan: seluruh data tetap ada di file JSON. */
-var USER=null, LOCK=null, BLOCKED=false, ALLOWED_ROUTES=["summary","spa","pa","promotor","best","campaign"];
+var USER=null, LOCK=null, SELF=null, BLOCKED=false, ALLOWED_ROUTES=["summary","spa","pa","promotor","best","campaign"];
 function hashPw(s){
   var h=2166136261>>>0; s=String(s==null?"":s);
   for(var i=0;i<s.length;i++){ h=(h^s.charCodeAt(i))>>>0; h=Math.imul(h,16777619)>>>0; }
@@ -2189,6 +2338,17 @@ function levSim(a,b){
   }
   return 1-prev[n]/Math.max(m,n);
 }
+/* jumlah potongan nama yang sama (toleran awalan: "agustin" vs "agustine") */
+function tokOverlap(a,b){
+  var A=norm(a).split(" ").filter(Boolean), B=norm(b).split(" ").filter(Boolean), c=0;
+  A.forEach(function(x){
+    for(var j=0;j<B.length;j++){
+      var y=B[j];
+      if(x===y || (x.length>=4 && y.indexOf(x)===0) || (y.length>=4 && x.indexOf(y)===0)){ c++; break; }
+    }
+  });
+  return c;
+}
 function findScopeIdx(arr,name){
   var n=norm(name); if(!n||!arr) return -1;
   var ft=firstTok(name), cand=-1, i;
@@ -2196,7 +2356,12 @@ function findScopeIdx(arr,name){
     var e=arr[i]; if(isBlankEntry(e)) continue;
     var v=norm(e);
     if(v===n) return i;
-    if(cand<0 && (v.indexOf(n)===0 || n.indexOf(v)===0 || firstTok(e)===ft)) cand=i;
+    if(cand<0){
+      if(v.indexOf(n)===0 || n.indexOf(v)===0) cand=i;
+      /* samakan hanya dari nama depan? wajib ada minimal 2 potongan nama yang cocok,
+         supaya "Catur Agil Kurniawan" tidak otomatis dianggap "Catur Widiarso" */
+      else if(firstTok(e)===ft && tokOverlap(n,v)>=2) cand=i;
+    }
   }
   if(cand>=0) return cand;
   /* toleransi salah ketik: ambil kandidat terdekat bila jelas paling mirip */
@@ -2261,7 +2426,7 @@ function roleKind(r){
   return "?";
 }
 function applyUser(u){
-  USER=u||null; LOCK=null; BLOCKED=false; ALLOWED_ROUTES=["summary","spa","pa","promotor","best","campaign"];
+  USER=u||null; LOCK=null; SELF=null; BLOCKED=false; ALLOWED_ROUTES=["summary","spa","pa","promotor","best","campaign"];
   var warn="";
   if(USER){
     var kind=roleKind(USER.r), want=null, hint="";
@@ -2269,6 +2434,7 @@ function applyUser(u){
       /* Partnership Associate: seluruh data SPA-nya (mis. Hari -> All SPA Denisahri) */
       var paIdx=findScopeIdx(DATA.pa||[],USER.n);
       if(paIdx>=0){
+        SELF={kind:"pa",field:"pa",name:clean(DATA.pa[paIdx]),idx:paIdx};
         var spaName=parentName("pa",paIdx);
         var spaIdx=spaName?findScopeIdx(DATA.spa||[],spaName):-1;
         if(spaIdx>=0) want={level:1,route:"spa",list:"spa",key:"spa",field:7,idx:spaIdx};
@@ -2276,12 +2442,13 @@ function applyUser(u){
       } else hint="nama <b>"+esc(USER.n||USER.u)+"</b> tidak ada di daftar Partnership Associate";
     }else if(kind==="spa"){
       var si=findScopeIdx(DATA.spa||[],USER.n);
-      if(si>=0) want={level:1,route:"spa",list:"spa",key:"spa",field:7,idx:si};
+      if(si>=0){ SELF={kind:"spa",field:"spa",name:clean(DATA.spa[si]),idx:si}; want={level:1,route:"spa",list:"spa",key:"spa",field:7,idx:si}; }
       else hint="nama <b>"+esc(USER.n||USER.u)+"</b> tidak ada di daftar SPA";
     }else if(kind==="prom"){
       /* Mobile Promoters: seluruh data Partnership Associate-nya (semua promotor & store di Partnership Associate tsb) */
       var prIdx=findScopeIdx(DATA.prom||[],USER.n);
       if(prIdx>=0){
+        SELF={kind:"prom",field:"pr",name:clean(DATA.prom[prIdx]),idx:prIdx};
         var paName=parentName("prom",prIdx);
         var paIdx2=paName?findScopeIdx(DATA.pa||[],paName):-1;
         if(paIdx2>=0) want={level:2,route:"pa",list:"pa",key:"pa",field:8,idx:paIdx2};
@@ -2313,6 +2480,9 @@ function applyAccessUI(){
   });
   var sl=document.getElementById("sideSetLbl");
   if(sl) sl.style.display=(ALLOWED_ROUTES.indexOf("account")>=0)?"":"none";
+  /* unduh CSV bulanan: khusus Administrator */
+  var bc=document.getElementById("btnCsv");
+  if(bc) bc.style.display=isAdminUser()?"":"none";
   var su=$("sideUser");
   if(su){
     if(USER){
@@ -2338,6 +2508,14 @@ function enter(u,persist){
   var pt=$("pwToggle"); if(pt){ pt.classList.remove("on"); pt.setAttribute("aria-pressed","false"); pt.title="Tampilkan kata sandi"; pt.setAttribute("aria-label",pt.title); }
   document.body.classList.remove("locked");
   startDashboard();
+  /* login baru selalu mendarat di Summary */
+  if(persist){
+    if(ALLOWED_ROUTES.indexOf("summary")>=0){
+      ROUTE="summary";
+      try{ if(location.hash!=="#/summary") location.hash="#/summary"; }catch(e){}
+      renderRoute();
+    }
+  }
 }
 function showLogin(msg){
   var lg=$("login"); if(lg) lg.hidden=false;
