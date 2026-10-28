@@ -365,6 +365,10 @@ table.tgt th.sticky.rk,table.tgt td.sticky.rk{text-align:center}
 
 /* di mode laporan tabel tampil penuh (tanpa scroll internal) -> matikan sticky agar urutan baris normal */
 #tgtSec.rpt-mode #tgtTable th,#tgtSec.rpt-mode #tgtTable td{position:static}
+/* tabel target per bulan (di luar area mode laporan/screenshot) */
+#tgtMonthTable.month-tgt{min-width:0}
+#tgtMonthTable tr.cur td{background:#eef6ff}
+#tgtMonthTable tfoot td{border-top:2px solid var(--line);font-weight:800}
 
 /* ---- Best Achievement: leaderboard PA / Promotor ---- */
 .ba-list{display:flex;flex-direction:column;gap:8px;margin-top:12px}

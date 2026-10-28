@@ -872,9 +872,23 @@ function targetRowData(){
     if(!box[sn]) box[sn]={n:0,g:0};
     box[sn].n+=f[11]; box[sn].g+=f[10];
   }
+  /* aktual per bulan pada tahun target — untuk tabel "Target per bulan"
+     (hanya store yang ada di baris target, supaya sama dengan baris TOTAL tabel) */
+  var tRows=targetFilterRows(), tset={};
+  tRows.forEach(function(t){ tset[norm(t.s)]=1; });
+  var mAct={}, yrT=+tm.month.slice(0,4);
+  for(var k2=0;k2<facts.length;k2++){
+    var f2=facts[k2], ym2=DATA.months[f2[0]];
+    if(!ym2||+ym2.slice(0,4)!==yrT) continue;
+    if(!keep(f2)) continue;
+    if(!tset[norm(clean(DATA.store[f2[4]]))]) continue;
+    var mo2=+ym2.slice(5,7);
+    if(!mAct[mo2]) mAct[mo2]={n:0,g:0};
+    mAct[mo2].n+=f2[11]; mAct[mo2].g+=f2[10];
+  }
   return {octIdx:octIdx,dim:dim,elapsed:elapsed,fac:dim/elapsed,act:act,prev:prev,prevYm:(pIdx>=0?DATA.months[pIdx]:null),
-          yoy:yoy,yoyYm:(yoyIdx>=0?DATA.months[yoyIdx]:null),
-          rows:targetFilterRows(),extraActive:(!fAll(F.prod)||!fAll(F.ins)||!fAll(F.status))};
+          yoy:yoy,yoyYm:(yoyIdx>=0?DATA.months[yoyIdx]:null),mAct:mAct,
+          rows:tRows,extraActive:(!fAll(F.prod)||!fAll(F.ins)||!fAll(F.status))};
 }
 /* ---- growth: estimasi EOM bulan berjalan vs realisasi bulan sebelumnya ---- */
 function prevYm(ym){
@@ -1059,6 +1073,37 @@ function renderTarget(){
     '<td>'+((function(){ var n=dayNeed(tG2,aG2); return isFinite(n)?(n<=0?'<span class="flat">—</span>':fmtIDR(n)):'<span class="flat">—</span>'; })())+'</td>'+
     '<td class="gcell">'+growthCell(totRow)+'</td><td class="gcell">'+growthCellYoy(totRow)+'</td>'+
     '<td>'+nDone+' / '+fr.length+' tercapai</td></tr>';
+  /* ---- tabel Target per bulan (Jan–Des tahun target) ---- */
+  var msec=$("tgtMonthSec");
+  if(msec) msec.hidden=!!(RPT||SHOT);
+  if($("tgtMonthTable")&&!RPT&&!SHOT){
+    var yrT=+tm.month.slice(0,4);
+    var rowsT=(rd?rd.rows:targetFilterRows());
+    var tG12=[], tN12=[];
+    for(var i12=0;i12<12;i12++){ tG12[i12]=0; tN12[i12]=0; }
+    rowsT.forEach(function(t){
+      var a=t.tm||[], b=t.nm||[];
+      for(var i=0;i<12;i++){ tG12[i]+=a[i]||0; tN12[i]+=b[i]||0; }
+    });
+    var mActM=(rd&&rd.mAct)||{};
+    var mBody="", sTG=0,sTN=0,sAG=0,sAN=0, moNow=+tm.month.slice(5,7);
+    for(var mo=1;mo<=12;mo++){
+      var ymM=yrT+"-"+("0"+mo).slice(-2);
+      var miM=DATA.months.indexOf(ymM);
+      var hasM=miM>=0&&(DATA.monthLastDay[miM]||0)>0;
+      var aM=mActM[mo]||{n:0,g:0};
+      var tgm=tG12[mo-1]||0, tnm=tN12[mo-1]||0;
+      if(tgm<=0&&tnm<=0&&!(hasM&&(aM.n||aM.g))) continue;
+      sTG+=tgm; sTN+=tnm; if(hasM){ sAG+=aM.g; sAN+=aM.n; }
+      mBody+='<tr'+(mo===moNow?' class="cur"':'')+'><td><b>'+esc(ymLabel(ymM))+'</b>'+(mo===moNow?' <span class="pill gray">berjalan</span>':'')+'</td>'+
+        '<td>'+fmtInt(tnm)+'</td><td>'+(hasM?fmtInt(aM.n):'<span class="flat">—</span>')+'</td><td>'+(hasM?achCell(tnm>0?aM.n/tnm:NaN):'<span class="flat">—</span>')+'</td>'+
+        '<td>'+fmtIDR(tgm)+'</td><td>'+(hasM?fmtIDR(aM.g):'<span class="flat">belum ada data</span>')+'</td><td>'+(hasM?achCell(tgm>0?aM.g/tgm:NaN):'<span class="flat">—</span>')+'</td></tr>';
+    }
+    var tbM=$("tgtMonthTable").querySelector("tbody");
+    if(tbM) tbM.innerHTML=mBody||'<tr><td colspan="7">Belum ada target per bulan.</td></tr>';
+    var tfM=$("tgtMonthTable").querySelector("tfoot");
+    if(tfM) tfM.innerHTML='<tr class="totrow"><td><b>TOTAL</b></td><td>'+fmtInt(sTN)+'</td><td>'+fmtInt(sAN)+'</td><td>'+achCell(sTN>0?sAN/sTN:NaN)+'</td><td>'+fmtIDR(sTG)+'</td><td>'+fmtIDR(sAG)+'</td><td>'+achCell(sTG>0?sAG/sTG:NaN)+'</td></tr>';
+  }
   shotFit();
   if(SHOT) shotArm(); else shotDim();
 }
@@ -1950,7 +1995,9 @@ function pageHTML(){
      '<div class="tgt-controls"><input id="tgtSearch" type="search" placeholder="Cari store / PA / promotor…"><span class="muted-sm hide-sm">pencarian berlaku ke seluruh halaman (kartu KPI, tren, blok, tabel)</span>'+modeCtl+'<select id="tgtSort"><option value="estHi">Urut: Estimasi % tertinggi</option><option value="tg">Urut: Target GWP terbesar</option><option value="achLo">Urut: Achievement GWP terendah</option><option value="achHi">Urut: Achievement GWP tertinggi</option><option value="gap">Urut: Selisih GWP terbesar</option></select>'+
           adminBtns+'</div>'+
      '<div id="shotCap" class="shot-cap" hidden></div>'+
-     '<div class="tbl-wrap tgt-wrap"><table id="tgtTable" class="tgt"><thead><tr><th class="sticky rk">No</th><th class="sticky">Store</th><th>PA</th><th>Promotor</th><th>Tgt NoP</th><th>Akt NoP</th><th>Ach NoP</th><th>Tgt GWP</th><th>Akt GWP</th><th>Ach GWP</th><th>Est NoP</th><th>Est GWP</th><th>Est Ach</th><th title="Target harian = sisa target GWP ÷ sisa hari bulan berjalan. GWP yang harus masuk tiap hari agar target store tercapai.">Target/hari</th><th class="gcol" title="Growth = estimasi akhir bulan (EOM) bulan berjalan vs realisasi '+pmLbl+'">Growth vs '+pmLbl+'</th><th class="gcol" title="YoY = estimasi akhir bulan (EOM) bulan berjalan vs realisasi '+yyLblFull+'">YoY vs '+yyLbl+'</th><th>Status</th></tr></thead><tbody></tbody><tfoot></tfoot></table></div></section>'+exitBtn;
+     '<div class="tbl-wrap tgt-wrap"><table id="tgtTable" class="tgt"><thead><tr><th class="sticky rk">No</th><th class="sticky">Store</th><th>PA</th><th>Promotor</th><th>Tgt NoP</th><th>Akt NoP</th><th>Ach NoP</th><th>Tgt GWP</th><th>Akt GWP</th><th>Ach GWP</th><th>Est NoP</th><th>Est GWP</th><th>Est Ach</th><th title="Target harian = sisa target GWP ÷ sisa hari bulan berjalan. GWP yang harus masuk tiap hari agar target store tercapai.">Target/hari</th><th class="gcol" title="Growth = estimasi akhir bulan (EOM) bulan berjalan vs realisasi '+pmLbl+'">Growth vs '+pmLbl+'</th><th class="gcol" title="YoY = estimasi akhir bulan (EOM) bulan berjalan vs realisasi '+yyLblFull+'">YoY vs '+yyLbl+'</th><th>Status</th></tr></thead><tbody></tbody><tfoot></tfoot></table></div></section>'+
+     '<section class="card" id="tgtMonthSec"><div class="card-h row"><div><h2>Target per bulan — '+((DATA.targetMeta&&DATA.targetMeta.month)?DATA.targetMeta.month.slice(0,4):"")+'</h2><p class="muted">Target NoP &amp; GWP tiap bulan dari Target.xlsx vs realisasi, mengikuti filter yang aktif.</p></div></div>'+
+     '<div class="tbl-wrap"><table id="tgtMonthTable" class="tgt month-tgt"><thead><tr><th>Bulan</th><th>Tgt NoP</th><th>Akt NoP</th><th>Ach NoP</th><th>Tgt GWP</th><th>Akt GWP</th><th>Ach GWP</th></tr></thead><tbody></tbody><tfoot></tfoot></table></div></section>'+exitBtn;
   if(grid1) h+='<div class="cols2">'+grid1+'</div>';
   if(rest) h+=rest;
   if(ROUTE==="summary"){

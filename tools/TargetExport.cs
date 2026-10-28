@@ -192,6 +192,13 @@ public static class TargetExport
                     double v = gwpCol.ContainsKey(i) ? Num(r, gwpCol[i]) : 0;
                     w.Write(v.ToString(System.Globalization.CultureInfo.InvariantCulture));
                 }
+                w.Write("],\"nm\":[");
+                for (int i = 0; i < 12; i++)
+                {
+                    if (i > 0) w.Write(",");
+                    double v = nopCol.ContainsKey(i) ? Num(r, nopCol[i]) : 0;
+                    w.Write(v.ToString(System.Globalization.CultureInfo.InvariantCulture));
+                }
                 w.Write("]}");
             }
             w.Write("]");
